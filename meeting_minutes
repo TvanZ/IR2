@@ -1,0 +1,49 @@
+—————————————————————————————————
+Advisor Meeting No. 1
+Wednesday: September 11th, 2019
+—————————————————————————————————
+
+A. Administrative Information:
+-Emails
+    -Whenever we have any questions, we should send emails to both advisors. 
+    -Harri will send us an email by sometime tomorrow that has the data we need as well as click models
+-Weekly submissions
+    -The introduction should have already been submitted, but that’ll be done next week along side the related 
+    works piece of writing
+    - Submissions are due at Tuesday at midnight, since Martin gets up really early.
+
+B. Clarification on Project:
+    - Provided by Harri
+    - PROBLEM: There is no real data to tell what people have observed, since we have no means of knowing about the 
+    documents people observed and chose not to click.Thus, first must simulate what people observe. (Harri has a ranker 
+    that he can provide, but we should also be able to find something pretty easily in the literature.)
+    - Goal: Then, use the GANs to see if it can figure out the observance model. (Note: This may not work.)
+    - We need to build a neural network that has two “parts”
+              Part 1: Predicts what if a document is observed
+              Part 2: From the observed documents, predicts what is clicked.       
+    -Previous approaches
+                (1) EM optimization
+                (2) Randomization
+                (3) The dual objective approach
+                (4) The recent thesis: use a GANs-based loss
+        *Our baselines are approaches 1-3.*
+
+C. Notes on Grading:
+    - Midterm presentation
+          - We’re expected to have some completed experiments by then, even if they are just very basic ones.
+    - Final paper/final presentation
+           - Explain if the model works, and why/why not
+           - Research questions are hard to come by, but good ones sound come up naturally during this process. 
+           Before we do any experiments, we should have a clear idea of our research questions and know how our 
+           experiments answer these questions. (This will also give us a good report.)
+
+D. TODO:
+    - Need to be able to generate clicks
+    - Have the baselines done. (Everyone will work in pairs)
+                -EM optimization: Traian and Orestis
+                -Dual Objective: Thomas and Sietze
+                -Randomization: Bella and Masoumeh 
+    - Hand in the introduction and related works Tuesday night
+            Would be nice to have everything done in Overleaf, where we share the link on the GitHub page? 
+            (This is just a thought. This point we didn’t discuss in the meeting.)
+
