@@ -160,6 +160,28 @@ class UserBrowsingModel(ClickModel):
 				exam_p = self.exam_prob[-1][idx]
 		return exam_p
 
+# Our new addition
+class ObservanceRelevanceModel(ClickModel):
+
+	@property
+	def model_name(self):
+		return 'observance-relevance-model'
+
+	def setExamProb(self,eta):
+		pass
+
+	def sampleClicksForOneList(self, label_list):
+		pass
+
+	def estimatePropensityWeightsForOneList(self, click_list, use_non_clicked_data=False):
+		pass
+
+	def sampleClick(self, rank, last_click_rank, relevance_label):
+		pass
+
+	def getExamProb(self, rank, last_click_rank):
+		pass
+
 
 def test_initialization():
 	# Test PBM
@@ -204,10 +226,10 @@ def main():
 	relevance_grading_num=int(sys.argv[4])
 	eta=float(sys.argv[5])
 
-	click_model = PositionBiasedModel(neg_click_prob, pos_click_prob, 
+	click_model = PositionBiasedModel(neg_click_prob, pos_click_prob,
 							relevance_grading_num, eta)
 	if model_name == 'ubm':
-		click_model = UserBrowsingModel(neg_click_prob, pos_click_prob, 
+		click_model = UserBrowsingModel(neg_click_prob, pos_click_prob,
 							relevance_grading_num, eta)
 
 	with open('./' + '_'.join(sys.argv[1:6]) + '.json', 'w') as fout:
