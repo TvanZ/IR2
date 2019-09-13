@@ -31,13 +31,14 @@ def get_dataset_from_json_info(
   else:
     num_feat = set_info['num_nonzero_feat']
 
-  return DataSet(dataset_name,
+  debug_ds = DataSet(dataset_name,
                  set_info['fold_paths'],
                  set_info['num_relevance_labels'],
                  num_feat,
                  set_info['num_nonzero_feat'],
                  already_normalized=set_info['query_normalized']
                 )
+  return debug_ds
 
 class DataSet(object):
 
