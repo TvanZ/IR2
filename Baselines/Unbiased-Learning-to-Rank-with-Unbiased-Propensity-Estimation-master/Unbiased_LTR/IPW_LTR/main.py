@@ -100,7 +100,7 @@ def train():
 		# Create model.
 		print("Creating model...")
 		model = create_model(sess, train_set, False)
-		print("Created %d layers of %d units." % (model.hparams.num_layers, model.embed_size))
+		#print("Created %d layers of %d units." % (model.hparams.num_layers, model.embed_size))
 
 		# Create tensorboard summarizations.
 		train_writer = tf.summary.FileWriter(FLAGS.train_dir + '/train_log',

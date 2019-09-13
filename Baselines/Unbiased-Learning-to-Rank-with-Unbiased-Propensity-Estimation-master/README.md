@@ -1,5 +1,8 @@
+# DLA RUN
 python ./Unbiased_LTR/DLA/main.py --max_train_iteration 100 --data_dir ./Input_Data/ --click_model_json ./Example_files/ClickModel/pbm_0.1_1.0_4_1.0.json --train_dir ./DLA_data/train_dir/ --test_dir ./DLA_data/test_dir --hparams "learning_rate=0.05", "hidden_layer_sizes=100", "loss_func='clicked_weighted_softmax_cross_entropy", "logits_to_prob = 'softmax'", "grad_strategy='ada'" --self_test False
 
+# IPW RUN
+python ./Unbiased_LTR/IPW_LTR/main.py --max_train_iteration 100 --data_dir ./Input_Data/ --click_model_json ./Example_files/ClickModel/pbm_0.1_1.0_4_1.0.json --train_dir ./IPW_data/train_dir/ --test_dir ./IPW_data/test_dir --estimator_json ./Example_files/PropensityEstimator/randomized_pbm_0.1_1.0_4_1.0.json  --hparams "learning_rate=0.05", "hidden_layer_sizes=100", "loss_func='clicked_weighted_softmax_cross_entropy" --self_test False
 
 # Overview #
 This is an implementation of the inverse propensity weighting algorithm (IPW_rank) and the Dual Learning Algorithm (DLA) for unbiased learning to rank <1>. Please cite the following paper if you plan to use it for your project：
