@@ -343,18 +343,19 @@ class DataFold(object):
                 test_label_vector    = test_label_vector,
               )
     if self.shared_resource:
-      train_feature_matrix = _make_shared(train_feature_matrix)
-      train_doclist_ranges = _make_shared(train_doclist_ranges)
-      train_label_vector   = _make_shared(train_label_vector)
-      valid_feature_matrix = _make_shared(valid_feature_matrix)
-      valid_doclist_ranges = _make_shared(valid_doclist_ranges)
-      valid_label_vector   = _make_shared(valid_label_vector)
-      test_feature_matrix  = _make_shared(test_feature_matrix)
-      test_doclist_ranges  = _make_shared(test_doclist_ranges)
-      test_label_vector    = _make_shared(test_label_vector)
+      train_feature_matrix = self._make_shared(train_feature_matrix)
+      train_doclist_ranges = self._make_shared(train_doclist_ranges)
+      train_label_vector   = self._make_shared(train_label_vector)
+      valid_feature_matrix = self._make_shared(valid_feature_matrix)
+      valid_doclist_ranges = self._make_shared(valid_doclist_ranges)
+      valid_label_vector   = self._make_shared(valid_label_vector)
+      test_feature_matrix  = self._make_shared(test_feature_matrix)
+      test_doclist_ranges  = self._make_shared(test_doclist_ranges)
+      test_label_vector    = self._make_shared(test_label_vector)
 
     n_feat = len(feature_map)
     assert n_feat == self.num_features, '%d features found but %d expected' % (n_feat, self.num_features)
+
 
     self.inverse_feature_map = feature_map
     self.feature_map = [x[0] for x in sorted(feature_map.items(), key=lambda x: x[1])]
