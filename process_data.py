@@ -2,40 +2,17 @@ import pretrainedmodels.dataset as dataset
 import pretrainedmodels.pretrained_models as prtr
 import numpy as np
 from optparse import OptionParser
-
-# TODO: what is this?....figure out
-
 import argparse
 
+
 parser = argparse.ArgumentParser(description='Process some integers.')
-
-parser.add_argument('--dataset_info_path', type=str, default="./pretrainedmodels/dataset_info.txt", help='The path to the dataset info')
-
+parser.add_argument('--dataset_info_path', type=str, default="./pretrainedmodels/dataset_info.txt",
+                    help='The path to the dataset info')
+parser.add_argument('--model_file', type=str, default="./pretrainedmodels/models/Webscope_C14_Set1/pretrained_model.txt",
+                    help='The path to the model_file')
 args = parser.parse_args()
 print(args)
 
-
-#
-# parser = OptionParser()
-#     # parameters to tune)
-# parser.add_option('-d', '--dataset_info_path', dest='dataset_info_path'
-# , help='frequency to perform validation')
-# # TODO: before completing parameter tuning change back to False
-# # TODO: otherwise, problems
-# parser.add_option('-x', '--save_predictions', dest='save_predictions', default=True,
-#                   help='export network predictions')
-# (options, args) = parser.parse_args()
-#
-
-
-
-
-
-
-
-
-
-# args = [ some argparser stuff ]
 
 # reading the Yahoo data
 data = dataset.get_dataset_from_json_info(
