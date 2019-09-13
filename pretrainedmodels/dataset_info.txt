@@ -3,7 +3,7 @@
     "num_folds": 1,
     "fold_paths": 
       [
-        "/ivi/ilps/personal/hooster2/ltrdatasets/Webscope_C14_Set1/"
+        "IR2/pretrainedmodels/models/Webscope_C14_Set1/"
       ],
     "num_relevance_labels": 5,
     "num_nonzero_feat": 519,
