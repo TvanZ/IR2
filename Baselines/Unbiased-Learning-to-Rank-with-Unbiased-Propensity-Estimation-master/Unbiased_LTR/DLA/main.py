@@ -44,6 +44,8 @@ tf.app.flags.DEFINE_boolean("use_non_clicked_data", False,
 							"Set to True for estimating propensity weights for non-click data.")
 tf.app.flags.DEFINE_boolean("decode", False,
 							"Set to True for decoding data.")
+tf.app.flags.DEFINE_boolean("self_test", False,
+							"Set to True for self test.")
 tf.app.flags.DEFINE_boolean("decode_train", False,
 							"Set to True for decoding training data.")
 # To be discarded.
@@ -89,7 +91,7 @@ def train():
 		# Create model.
 		print("Creating model...")
 		model = create_model(sess, train_set, False)
-		print("Created %d layers of %d units." % (model.hparams.num_layers, model.embed_size))
+		#print("Created %d layers of %d units." % (model.hparams.num_layers, model.embed_size))
 
 		# Create tensorboard summarizations.
 		train_writer = tf.summary.FileWriter(FLAGS.train_dir + '/train_log',
