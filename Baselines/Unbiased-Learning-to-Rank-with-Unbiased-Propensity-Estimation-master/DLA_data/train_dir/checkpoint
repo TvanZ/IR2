@@ -1,2 +1,2 @@
-model_checkpoint_path: "DLA.ckpt-400"
-all_model_checkpoint_paths: "DLA.ckpt-400"
+model_checkpoint_path: "DLA.ckpt-600"
+all_model_checkpoint_paths: "DLA.ckpt-600"

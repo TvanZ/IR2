@@ -171,13 +171,28 @@ class ObservanceRelevanceModel(ClickModel):
 		pass
 
 	def sampleClicksForOneList(self, label_list):
-		pass
+	    click_list, exam_p_list, click_p_list = [], [], []
+	    last_click_rank = -1
+	    for rank in xrange(len(label_list)):
+			click, exam_p, click_p = self.sampleClick(rank, last_click_rank, label_list[rank])
+			if click > 0:
+				last_click_rank = rank
+			click_list.append(click)
+			exam_p_list.append(exam_p)
+			click_p_list.append(click_p)
+		return click_list, exam_p_list, click_p_list
 
 	def estimatePropensityWeightsForOneList(self, click_list, use_non_clicked_data=False):
 		pass
 
 	def sampleClick(self, rank, last_click_rank, relevance_label):
-		pass
+		if not relevance_label == int(relevance_label):
+			print('RELEVANCE LABEL MUST BE INTEGER!')
+		relevance_label = int(relevance_label) if relevance_label > 0 else 0
+		exam_p = self.getExamProb(rank, last_click_rank)
+		click_p = self.click_prob[relevance_label if relevance_label < len(self.click_prob) else -1]
+		click = 1 if random.random() < exam_p * click_p else 0
+		return click, exam_p, click_p
 
 	def getExamProb(self, rank, last_click_rank):
 		pass

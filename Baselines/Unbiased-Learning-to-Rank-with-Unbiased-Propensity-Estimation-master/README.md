@@ -1,4 +1,6 @@
 # How to Run #
+Requirements: Python 2.7 and Tensorflow 1.4
+
 To verify that this module works do the following:
 
     1. Download Yahoo Letor dataset and extract all files names set2.*.*

@@ -1,7 +1,8 @@
 data
 Letor_Data
 Input_Data
-DLA_data/train_dir
-DLA_data/test_dir
-IPW_data/train_dir
-IPW_data/test_dir
+DLA_data
+IPW_data
+
+Baselines/Unbiased-Learning-to-Rank-with-Unbiased-Propensity-Estimation-master/DLA_data/
+Baselines/Unbiased-Learning-to-Rank-with-Unbiased-Propensity-Estimation-master/IPW_data/
