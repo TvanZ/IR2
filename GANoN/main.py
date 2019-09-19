@@ -37,9 +37,13 @@ def main():
 
 	full_click_list, full_exam_p_list, full_click_p_list = [],[],[]
 	for ranking in train_set.gold_weights[:10]:
+		print("Rank")
 		print(ranking)
-		click_list, exam_p_list, click_p_list = click_model.sampleClicksForOneList(ranking)
+		click_list, exam_p_list, click_p_list, exam_list = click_model.sampleClicksForOneList(ranking)
+		print("clicks")
 		print(click_list)
+		print("exam")
+		print(exam_list)
 
 class GAN:
 	def __init__(self, click_model, rank_list_size,
