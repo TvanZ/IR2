@@ -3,7 +3,9 @@ import random
 import math
 import json
 import numpy as np
-from torch import nn
+import torch
+import torch.nn as nn
+import torch.optim as optim
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import data_utils
@@ -42,9 +44,9 @@ def main():
 		print(click_list)
 
 class GAN:
-	def __init__(self, click_model, rank_list_size,
-	g_settings, d_settings, optimizer, criterion,
-	batch_size, forward_only=False, feed_previous = False):
+	def __init__(self, click_model, rank_list_size, batch_size,
+	g_settings, d_settings, g_optimizer, d_optimizer, criterion = nn.BCELoss(),
+	forward_only=False, feed_previous = False):
 		self.click_model = click_model
 		self.rank_list_size = rank_list_size
 		self.batch_size = batch_size
@@ -54,21 +56,39 @@ class GAN:
 
 		self.G = Generator(g.input_size, g.hidden_size, g.output_size, g.fn)
 		self.D = Disriminator(d.input_size, d.hidden_size, d.output_size, d.fn)
-		self.optimizer = optimizer
+		self.d_optimizer = d_optimizer(self.D.parameters())
+		self.g_optimizer = g_optimizer(self.G.parameters())
 		self.criterion = criterion
 
 	def train(click_logs, rankings):
-		# first train the discriminator
-		self.D.zero_grad()
-		real_decision = self.D(click_logs)
-		real_error = self.criterion(real_decision )
+		for d_index in range(d_steps):
+			# first train the discriminator
+			self.D.zero_grad()
+			# train on real data
+			real_decision = self.D(click_logs)
+			real_error = self.criterion(real_decision, torch.ones(click_logs.size()))
+			real_error.backward()
+			# train on fake data
+			fake_data = self.G(rankings).detach()
+			fake_decision = self.D(fake_data)
+			fake_error = self.criterion(fake_decision, torch.zeros(fake_data.size()))
+			fake_error.backward()
+			self.d_optimizer.step()
 
-		# then train the generator
+		for g_index in range(g_steps):
+			# then train the generator
+			self.G.zero_grad()
+			# generate fake examples
+			g_fake_data = self.G(rankings)
+			g_fake_decision = self.D(g_fake_data)
+			g_error = self.criterion(g.fake_decision, torch.ones(g_fake_decision.size()))
+			g_error.backward()
+			self.g_optimizer.step()
 
 class Generator(nn.Module):
 	def __init__(self, input_size, hidden_size, output_size, fn):
 		super(Generator, self).__init__()
-		self.g = nn.Sequential(
+		self.observance = nn.Sequential(
 			nn.Linear(input_size, hidden_size),
 			fn,
 			nn.Linear(hidden_size, hidden_size),
@@ -76,6 +96,7 @@ class Generator(nn.Module):
 			nn.Linear(hidden_size, output_size),
 			# binairy aproximator here
 		)
+		self.relevance = (observance):
 
 	def forward(self, x):
 		return self.g(x)
