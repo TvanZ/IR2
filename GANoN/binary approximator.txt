@@ -1,7 +1,12 @@
 
 
-def binary_approximation (alpha = 0,beta = 0.5, gamma = -0.1, zeta = 1.1):
-	s = nn.Sigmoid((np.log(u) - np.log(1 - u) + log(alpha))/beta)
-	mean_s = s(zeta - gamma) + gamma
-	z = min(1,(max(0,mean_s)))
+def binary_approximation(u, alpha = 0,beta = 0.5, gamma = -0.1, zeta = 1.1):
+	s = torch.Sigmoid((torch.log(u) - torch.log(1 - u) + np.log(alpha))/beta)
+	mean_s = s * (zeta - gamma) + gamma
+	binarysize = mean_s.size()
+	z = min(torch.ones(binarysize),(max(torch.zeros(binarysize),mean_s)))
 	return z
+
+
+
+	
