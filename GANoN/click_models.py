@@ -35,7 +35,7 @@ class ClickModel:
 	def setClickProb(self, neg_click_prob, pos_click_prob, relevance_grading_num):
 		b = (pos_click_prob - neg_click_prob)/(pow(2, relevance_grading_num) - 1)
 		a = neg_click_prob - b
-		self.click_prob = [a + pow(2,i)*b for i in xrange(relevance_grading_num+1)]
+		self.click_prob = [a + pow(2,i)*b for i in range(relevance_grading_num+1)]
 
 	# Set the examination probability for the click model.
 	def setExamProb(self,eta):
@@ -63,7 +63,7 @@ class PositionBiasedModel(ClickModel):
 
 	def sampleClicksForOneList(self, label_list):
 		click_list, exam_p_list, click_p_list = [], [], []
-		for rank in xrange(len(label_list)):
+		for rank in range(len(label_list)):
 			click, exam_p, click_p = self.sampleClick(rank, label_list[rank])
 			click_list.append(click)
 			exam_p_list.append(exam_p)
@@ -72,7 +72,7 @@ class PositionBiasedModel(ClickModel):
 
 	def estimatePropensityWeightsForOneList(self, click_list, use_non_clicked_data=False):
 		propensity_weights = []
-		for r in xrange(len(click_list)):
+		for r in range(len(click_list)):
 			pw = 0.0
 			if use_non_clicked_data | click_list[r] > 0:
 				pw = 1.0/self.getExamProb(r) * self.getExamProb(0)
@@ -112,13 +112,13 @@ class UserBrowsingModel(ClickModel):
 			[1.0, 1.0, 1.0, 0.96, 0.52, 0.36, 0.27, 0.18, 0.12, 0.43]
 		]
 		self.exam_prob = []
-		for i in xrange(len(self.original_rd_exam_table)):
+		for i in range(len(self.original_rd_exam_table)):
 			self.exam_prob.append([pow(x, eta) for x in self.original_rd_exam_table[i]])
 
 	def sampleClicksForOneList(self, label_list):
 		click_list, exam_p_list, click_p_list = [], [], []
 		last_click_rank = -1
-		for rank in xrange(len(label_list)):
+		for rank in range(len(label_list)):
 			click, exam_p, click_p = self.sampleClick(rank, last_click_rank, label_list[rank])
 			if click > 0:
 				last_click_rank = rank
@@ -130,7 +130,7 @@ class UserBrowsingModel(ClickModel):
 	def estimatePropensityWeightsForOneList(self, click_list, use_non_clicked_data=False):
 		propensity_weights = []
 		last_click_rank = -1
-		for r in xrange(len(click_list)):
+		for r in range(len(click_list)):
 			pw = 0.0
 			if use_non_clicked_data | click_list[r] > 0:
 				pw = 1.0/self.getExamProb(r, last_click_rank)
