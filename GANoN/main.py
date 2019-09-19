@@ -36,16 +36,17 @@ def main():
 	valid_set = data_utils.read_data(INPUT_DATA_PATH, 'valid', RANK_CUT)
 
 	full_click_list, full_exam_p_list, full_click_p_list = [],[],[]
-	for ranking in train_set.initial_list[:10]:
+	for ranking in train_set.gold_weights[:10]:
+		print(ranking)
 		click_list, exam_p_list, click_p_list = click_model.sampleClicksForOneList(ranking)
 		print(click_list)
 
 class GAN:
-    def __init__(self, click_model, rank_list_size,
-    g_settings, d_settings,
-	batch_size, hparam_str, forward_only=False, feed_previous = False):
-    	self.click_model = click_model
-    	self.rank_list_size = rank_list_size
+	def __init__(self, click_model, rank_list_size,
+	g_settings, d_settings, optimizer, criterion,
+	batch_size, forward_only=False, feed_previous = False):
+		self.click_model = click_model
+		self.rank_list_size = rank_list_size
 		self.batch_size = batch_size
 
 		g = g_settings
@@ -53,18 +54,28 @@ class GAN:
 
 		self.G = Generator(g.input_size, g.hidden_size, g.output_size, g.fn)
 		self.D = Disriminator(d.input_size, d.hidden_size, d.output_size, d.fn)
+		self.optimizer = optimizer
+		self.criterion = criterion
+
+	def train(click_logs, rankings):
+		# first train the discriminator
+		self.D.zero_grad()
+		real_decision = self.D(click_logs)
+		real_error = self.criterion(real_decision )
+
+		# then train the generator
 
 class Generator(nn.Module):
 	def __init__(self, input_size, hidden_size, output_size, fn):
 		super(Generator, self).__init__()
 		self.g = nn.Sequential(
-   			nn.Linear(input_size, hidden_size),
-   			fn,
-   			nn.Linear(hidden_size, hidden_size),
-   			fn,
-   			nn.Linear(hidden_size, output_size),
-   			# binairy aproximator here
-   		)
+			nn.Linear(input_size, hidden_size),
+			fn,
+			nn.Linear(hidden_size, hidden_size),
+			fn,
+			nn.Linear(hidden_size, output_size),
+			# binairy aproximator here
+		)
 
 	def forward(self, x):
 		return self.g(x)
@@ -73,13 +84,13 @@ class Discriminator(nn.Module):
 	def __init__(self, input_size, hidden_size, output_size, fn):
 		super(Discriminator, self).__init__()
 		self.d = nn.Sequential(
-   			nn.Linear(input_size, hidden_size),
-   			fn,
-   			nn.Linear(hidden_size, hidden_size),
-   			fn,
-   			nn.Linear(hidden_size, output_size),
-   			fn
-   		)
+			nn.Linear(input_size, hidden_size),
+			fn,
+			nn.Linear(hidden_size, hidden_size),
+			fn,
+			nn.Linear(hidden_size, output_size),
+			fn
+		)
 
 	def forward(self, x):
 		return self.d(x)

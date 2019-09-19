@@ -13,13 +13,14 @@
 # limitations under the License.
 # ==============================================================================
 
-import numpy as np
+
 import json
 import random
 import os
 
+
 class Raw_data:
-	def __init__(self, data_path = None, file_prefix = None, rank_cut=100000):
+	def __init__ (self, data_path = None, file_prefix = None, rank_cut = 100000):
 		if data_path == None:
 			self.embed_size = -1
 			self.rank_list_size = -1
@@ -31,6 +32,7 @@ class Raw_data:
 			self.gold_weights = []
 			return
 
+
 		settings = json.load(open(data_path + 'settings.json'))
 		self.embed_size = settings['embed_size']
 		self.rank_list_size = rank_cut if rank_cut<settings['rank_cutoff'] else settings['rank_cutoff']
@@ -41,11 +43,13 @@ class Raw_data:
 		for line in feature_fin:
 			arr = line.strip().split(' ')
 			self.dids.append(arr[0])
-			self.features.append([0.0 for _ in xrange(self.embed_size)])
+			self.features.append([0.0 for _ in range(self.embed_size)])
 			for x in arr[1:]:
 				arr2 = x.split(':')
 				self.features[-1][int(arr2[0])] = float(arr2[1])
 		feature_fin.close()
+
+
 
 		self.initial_list = []
 		self.qids = []
@@ -76,8 +80,8 @@ class Raw_data:
 
 	def pad(self, rank_list_size, pad_tails = True):
 		self.rank_list_size = rank_list_size
-		self.features.append([0 for _ in xrange(self.embed_size)])  # vector for pad
-		for i in xrange(len(self.initial_list)):
+		self.features.append([0 for _ in range(self.embed_size)])  # vector for pad
+		for i in range(len(self.initial_list)):
 			if len(self.initial_list[i]) < self.rank_list_size:
 				if pad_tails: # pad tails
 					self.initial_list[i] += [-1] * (self.rank_list_size - len(self.initial_list[i]))
@@ -97,7 +101,7 @@ def generate_ranklist(data, rerank_lists):
 		raise ValueError("Rerank ranklists number must be equal to the initial list,"
 						 " %d != %d." % (len(rerank_lists)), len(data.initial_list))
 	qid_list_map = {}
-	for i in xrange(len(data.qids)):
+	for i in range(len(data.qids)):
 		if len(rerank_lists[i]) != len(data.initial_list[i]):
 			raise ValueError("Rerank ranklists length must be equal to the gold list,"
 							 " %d != %d." % (len(rerank_lists[i]), len(data.initial_list[i])))
@@ -110,7 +114,7 @@ def generate_ranklist(data, rerank_lists):
 			if idx not in index_set:
 				index_set.add(idx)
 				index_list.append(idx)
-		for idx in xrange(len(rerank_lists[i])):
+		for idx in range(len(rerank_lists[i])):
 			if idx not in index_set:
 				index_list.append(idx)
 		#get new ranking list
@@ -128,7 +132,7 @@ def generate_ranklist_by_scores(data, rerank_scores):
 		raise ValueError("Rerank ranklists number must be equal to the initial list,"
 						 " %d != %d." % (len(rerank_lists)), len(data.initial_list))
 	qid_list_map = {}
-	for i in xrange(len(data.qids)):
+	for i in range(len(data.qids)):
 		scores = rerank_scores[i]
 		rerank_list = sorted(range(len(scores)), key=lambda k: scores[k], reverse=True)
 		if len(rerank_list) != len(data.initial_list[i]):
@@ -143,7 +147,7 @@ def generate_ranklist_by_scores(data, rerank_scores):
 			if idx not in index_set:
 				index_set.add(idx)
 				index_list.append(idx)
-		for idx in xrange(len(rerank_list)):
+		for idx in range(len(rerank_list)):
 			if idx not in index_set:
 				index_list.append(idx)
 		#get new ranking list
@@ -161,8 +165,7 @@ def output_ranklist(data, rerank_scores, output_path, file_name = 'test'):
 	qid_list_map = generate_ranklist_by_scores(data, rerank_scores)
 	fout = open(output_path + file_name + '.ranklist','w')
 	for qid in data.qids:
-		for i in xrange(len(qid_list_map[qid])):
+		for i in range(len(qid_list_map[qid])):
 			fout.write(qid + ' Q0 ' + qid_list_map[qid][i][0] + ' ' + str(i+1)
 							+ ' ' + str(qid_list_map[qid][i][1]) + ' RankLSTM\n')
 	fout.close()
-
