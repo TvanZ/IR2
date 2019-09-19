@@ -73,7 +73,7 @@ class GAN:
 			real_error = self.criterion(real_decision, torch.ones(click_logs.size()))
 			real_error.backward()
 			# train on fake data
-			fake_data = self.G(rankings).detach()
+			fake_observations, fake_data = self.G(rankings).detach()
 			fake_decision = self.D(fake_data)
 			fake_error = self.criterion(fake_decision, torch.zeros(fake_data.size()))
 			fake_error.backward()
@@ -83,7 +83,7 @@ class GAN:
 			# then train the generator
 			self.G.zero_grad()
 			# generate fake examples
-			g_fake_data = self.G(rankings)
+			g_fake_observations, g_fake_data = self.G(rankings)
 			g_fake_decision = self.D(g_fake_data)
 			g_error = self.criterion(g.fake_decision, torch.ones(g_fake_decision.size()))
 			g_error.backward()
@@ -98,12 +98,25 @@ class Generator(nn.Module):
 			nn.Linear(hidden_size, hidden_size),
 			fn,
 			nn.Linear(hidden_size, output_size),
-			# binairy aproximator here
+			fn,
+			BinaryApproximator()
 		)
-		self.relevance = (observance):
+		self.relevance = nn.Sequential(
+			nn.Linear(input_size, hidden_size),
+			fn,
+			nn.Linear(hidden_size, hidden_size),
+			fn,
+			nn.Linear(hidden_size, output_size),
+			fn,
+			BinaryApproximator()
+		)
 
-	def forward(self, x):
-		return self.g(x)
+	def forward(self, relevance_scores):
+		random_noise = torch.rand(relevance_scores.size())
+		observation_scores = self.observance(random_noise)
+		modified_relevance = observation_scores * relevance_scores
+		fake_click_logs = self.relevance(modified_relevance)
+		return observation_scores, fake_click_logs
 
 class Discriminator(nn.Module):
 	def __init__(self, input_size, hidden_size, output_size, fn):
@@ -119,6 +132,21 @@ class Discriminator(nn.Module):
 
 	def forward(self, x):
 		return self.d(x)
+
+class BinaryApproximator(nn.Module):
+	def __init__(self, alpha = 0, beta = 0.5, gamma = -0.1, zeta = 1.1):
+		super(BinaryApproximator, self).__init__()
+		self.alpha = alpha
+		self.beta = beta
+		self.gamma = gamma
+		self.zeta = zeta
+
+	def forward(self, u):
+		s = torch.Sigmoid((torch.log(u) - torch.log(1 - u) + np.log(self.alpha))/self.beta)
+		mean_s = s * (self.zeta - self.gamma) + self.gamma
+		binarysize = mean_s.size()
+		z = min(torch.ones(binarysize),(max(torch.zeros(binarysize),mean_s)))
+		return z
 
 
 if __name__ == "__main__":
