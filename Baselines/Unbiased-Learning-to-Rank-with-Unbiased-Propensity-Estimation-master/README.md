@@ -1,5 +1,6 @@
 # How to Run #
 Requirements: Python 2.7 and Tensorflow 1.4
+(Useful to create a seperate environment)
 
 To verify that this module works do the following:
 
@@ -7,7 +8,7 @@ To verify that this module works do the following:
     2. Put the extracted files in the folder: Letor_Data (create this folder if it doesn't exist).
     3. Rename the files from set2.*.* to set1.*.*
     4. Create folders DLA_data and IPW_data and create folder train_dir and test_dir within both. Also create folder Input_Data.
-    5. Run python ./scripts/Prepare_yahoo_letor_data_set1.py ./Letor_Data ./Initial_Rank ./Input_Data 10
+    5. Run python ./scripts/Prepare_yahoo_letor_data_set1.py ./Letor_Data/ ./Initial_Rank/ ./Input_Data/ 10
     6. Run python ./Unbiased_LTR/DLA/main.py --max_train_iteration 100 --data_dir ./Input_Data/ --click_model_json ./Example_files/ClickModel/pbm_0.1_1.0_4_1.0.json --train_dir ./DLA_data/train_dir/ --test_dir ./DLA_data/test_dir --hparams "learning_rate=0.05", "hidden_layer_sizes=100", "loss_func='clicked_weighted_softmax_cross_entropy", "logits_to_prob = 'softmax'", "grad_strategy='ada'" --self_test False
     7. python ./Unbiased_LTR/IPW_LTR/main.py --max_train_iteration 100 --data_dir ./Input_Data/ --click_model_json ./Example_files/ClickModel/pbm_0.1_1.0_4_1.0.json --train_dir ./IPW_data/train_dir/ --test_dir ./IPW_data/test_dir --estimator_json ./Example_files/PropensityEstimator/randomized_pbm_0.1_1.0_4_1.0.json  --hparams "learning_rate=0.05", "hidden_layer_sizes=100", "loss_func='clicked_weighted_softmax_cross_entropy" --self_test False
 

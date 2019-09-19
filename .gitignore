@@ -8,3 +8,9 @@ Baselines/Unbiased-Learning-to-Rank-with-Unbiased-Propensity-Estimation-master/D
 Baselines/Unbiased-Learning-to-Rank-with-Unbiased-Propensity-Estimation-master/IPW_data/
 
 .idea
+
+# ignore all backup files
+*.*~
+
+# ignore all pycache folders
+*/__pycache__/
