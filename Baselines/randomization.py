@@ -8,7 +8,6 @@ dir_filepath = os.path.join("Unbiased-Learning-to-Rank-with-Unbiased-Propensity-
                                 "test")
 os.chdir(dir_filepath)
 
-# TODO: pad AFTER randomization scores
 def pad_weights(target_file, output_filename):
     """
     Creates padded version test.padded_weights file in same dir.
@@ -42,11 +41,14 @@ def randomize_rankings(randomized_filename, RandomType="Top_RandN", topN=5):
     with open(output_file) as SVM_rankings:
         query_rankings = SVM_rankings.readlines()
 
-        # TODO: insert assert error for top_randN > 10
         for document_list in query_rankings:
             # making str of text into numpy array with rankings
             queryID = str(document_list).strip().split(' ')[0]
             doc_rankings = np.asarray(str(document_list).strip().split(' ')[1:])
+
+            # throw an error if topN (to be shuffled) exceeds the number of
+            # docs in the list
+            assert topN < 10, "ERROR! Trying to shuffle more documents than a present in the ranking."
 
             # shuffling methods
             if RandomType == "RandTopN": # shuffling top 5 documents randomly
@@ -78,11 +80,13 @@ if __name__ == "__main__":
 
     source_file = "test.weights"
     output_file = "test.padded_weights"
+    # TODO: fix order of padding with randomization
     pad_weights(target_file=source_file, output_filename=output_file)
 
     # types of randomization implemented
     options = ["RandTopN", "RandPair"]
     selected_option = options[1]
+
     # creating filename
     randomized_filename = "test.randomized_{}_weights".format(selected_option)
     randomize_rankings(randomized_filename, selected_option)
