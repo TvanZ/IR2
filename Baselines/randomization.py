@@ -34,7 +34,7 @@ def pad_weights(target_file, output_filename):
                 write_file.write(document_list)
 
 
-def randomize_rankings(randomized_filename, RandomType="Top_RandN"):
+def randomize_rankings(randomized_filename, RandomType="Top_RandN", topN=5):
     # clears file if it already exists
     open(randomized_filename, 'w').close()
 
@@ -42,33 +42,37 @@ def randomize_rankings(randomized_filename, RandomType="Top_RandN"):
     with open(output_file) as SVM_rankings:
         query_rankings = SVM_rankings.readlines()
 
+        # TODO: insert assert error for top_randN > 10
         for document_list in query_rankings:
             # making str of text into numpy array with rankings
             queryID = str(document_list).strip().split(' ')[0]
             doc_rankings = np.asarray(str(document_list).strip().split(' ')[1:])
 
-            # shuffling top 5 documents randomly
-            if RandomType == "Top_RandN":
-                shuffles_inds = np.random.permutation(5)
-                # adding the non-shuffled indicies back in
-                shuffled_doc_rankings = np.append(doc_rankings[shuffles_inds], doc_rankings[5:])
-                # adding the query ID back in
-                shuffled_doc_rankings = np.append(queryID, shuffled_doc_rankings)
-                # convert np array back into list
-                shuffled_doc_rankings = shuffled_doc_rankings.tolist()
-                shuffled_doc_rankings = " ".join(shuffled_doc_rankings) + '\n'
+            # shuffling methods
+            if RandomType == "RandTopN": # shuffling top 5 documents randomly
+                shuffled_inds = np.random.permutation(topN)
 
-                # TODO: figure out a better place to put this?
-                with open(randomized_filename, 'a') as randomized_file:
-                    randomized_file.write(shuffled_doc_rankings)
-
-            elif RandomType == "RandPairs":
-                # TODO: pairwise
-                print(RandomType)
+            elif RandomType == "RandPair": # shuffling pairwise
+                shuffled_inds = np.arange(topN)
+                # shuffling inds pair-wise
+                for ind in range(len(shuffled_inds)-1):
+                    shuffle_docs = np.random.choice([True, False])
+                    if shuffle_docs:
+                        shuffled_inds[ind], shuffled_inds[ind+1] = shuffled_inds[ind+1], shuffled_inds[ind]
 
             else:
                 "ERROR! Unknown randomization type. Either input 'Top_RandN' or 'RandPairs' to randomize rankings."
 
+            # adding the non-shuffled indicies back in
+            shuffled_doc_rankings = np.append(doc_rankings[shuffled_inds], doc_rankings[5:])
+            # adding the query ID back in
+            shuffled_doc_rankings = np.append(queryID, shuffled_doc_rankings)
+            # convert np array back into list
+            shuffled_doc_rankings = shuffled_doc_rankings.tolist()
+            shuffled_doc_rankings = " ".join(shuffled_doc_rankings) + '\n'
+
+            with open(randomized_filename, 'a') as randomized_file:
+                randomized_file.write(shuffled_doc_rankings)
 
 if __name__ == "__main__":
 
@@ -77,9 +81,11 @@ if __name__ == "__main__":
     pad_weights(target_file=source_file, output_filename=output_file)
 
     # types of randomization implemented
-    options = ["Top_RandN", "RandPairs"]
-    randomized_filename = "test.randomized_weights"
-    randomize_rankings(randomized_filename, options[2])
+    options = ["RandTopN", "RandPair"]
+    selected_option = options[1]
+    # creating filename
+    randomized_filename = "test.randomized_{}_weights".format(selected_option)
+    randomize_rankings(randomized_filename, selected_option)
 
 
 
