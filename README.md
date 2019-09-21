@@ -21,7 +21,11 @@ For our upcoming advisor meeting, we would like to discuss: <br>
       (1.) When we discretize the generator’s probability as either a zero or one using the methodology disccused in 
       Paper 6, we sometimes can values that aren’t zero or one. (Assuming we correctly implemented the author's 
       discretization method.) Is this something we need to correct/take some measure against? Or, will the 
-      discriminator just learn that these clicks are clearly fake and push the generator to produce strictly binary clicks? 
+      discriminator just learn that these clicks are clearly fake and push the generator to produce strictly binary clicks?
+<br> 
+      (2.) Are our regression-based EM algorithm is underestimation position bias; however it looks as though the original
+      paper's EM algorithm overestimated position bias. Could this be a result of us using different parameters, or 
+      is there an error in our implementation?
 
 ### Paper
 
