@@ -16,11 +16,12 @@ recently a new method for such variables had also been introduced.
 ### Project
 
 ### Weekly Questions
-For our upcoming advisor meeting, we would like to discuss:
-      (1)  When we discretize the generator’s probability as either a zero or one using the methodology disccused in 
+For our upcoming advisor meeting, we would like to discuss: <br> 
+<br> 
+      (1.) When we discretize the generator’s probability as either a zero or one using the methodology disccused in 
       Paper 6, we sometimes can values that aren’t zero or one. (Assuming we correctly implemented the author's 
       discretization method.) Is this something we need to correct/take some measure against? Or, will the 
-      discriminator just learn that these clicks are clearly fake and push the generator to produce strictly binary clicks?
+      discriminator just learn that these clicks are clearly fake and push the generator to produce strictly binary clicks? 
 
 ### Paper
 
