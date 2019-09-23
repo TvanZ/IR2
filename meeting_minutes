@@ -1,7 +1,7 @@
-—————————————————————————————————
+———————————————————————————————————————————————————————————————————————————————————————————————————
 Advisor Meeting No. 1
 Wednesday: September 11th, 2019
-—————————————————————————————————
+———————————————————————————————————————————————————————————————————————————————————————————————————
 
 A. Administrative Information:
 -Emails
@@ -46,4 +46,68 @@ D. TODO:
     - Hand in the introduction and related works Tuesday night
             Would be nice to have everything done in Overleaf, where we share the link on the GitHub page? 
             (This is just a thought. This point we didn’t discuss in the meeting.)
+
+———————————————————————————————————————————————————————————————————————————————————————————————————
+Advisor Meeting No. 2
+Wednesday: September 18th, 2019
+———————————————————————————————————————————————————————————————————————————————————————————————————
+
+A. Write Up Feedback
+    -Introduction:
+            - Need to include some overall context of ranking and search (why it's important in the first place)
+            - Clearly defined what bias is in this context, and be more specific with the kinds of bias we are 
+            focused on
+            - At the end of introduction, include the motivation as to why we're interested in a GAN model.
+            - Finally, conclude with a summary of what we're going to do in this report/paper
+    -Related Works:
+            - Mention click models as well as counterfactual learning to rank
+            - Reference the original paper that introduced GAN architecture
+    -Generally:
+            - Use subsections if the introduction/related works gets so long that it feels unamangeable. Otherwise,
+            subsections/subtitles aren't needed.
+
+B. Processing our Datasets
+    -Need to look into:
+        -How long it takes us to process our raw data, since the Yahoo dataset (that we're currently working on) is
+        pretty small. If we try to extend our pipeline to other datasets, then it needs to be very fast and efficent.
+        -Feature normalization: only normalize features with respects to the query
+            - Usually between interval of zero and one, where (x - min)/(max-min) easily works
+            - Only the Websco dataset is normalized
+            - For now, this is not a real concern; however, this will likely become a problem later on.
+    -Harrie's code (for pre-processing)
+            -Would give us a score with every document, where we only have to sort in descending order to get a ranking.
+    -Should we have our generated clicks?
+            -Inevitably, we will likely have to do this in some form, where we either just store our clicks or aggregate
+            statistics from the clicks (e.g. the number of clicks that occured at position k)
+            ***********************************************************************************************
+            - WARNING: number of unique interactions should be the same across all the models we implement
+            ***********************************************************************************************
+    -TODO: things we should implement
+            (1) If we don't use Harrie's code, then it's recommended to use an inverted ranking, which makes it easier 
+            to calculate DCG.
+            (2) If it takes too long for us to get clicks, we need to email Harrie. If needed, we can have an additional
+            meeting.
+
+C. Regression-based EM Algorithm:
+    -Look int othe Unbaised LTR from Unbiased Feedback paper for how to simulate click logs (which we also have from the 
+    DLA paper)
+    -We can skip Gradient Boosted Decision Trees, and just use a neural network in place if we're too frustrated by 
+    GBDTs. (This is just a suggestion. We can also stick to GBDTs.)
+
+D. General Baselines
+    -We've decided to stick to only showing the top 10 results across all models. (If we change this in one model, then we 
+    have to change it in another.)
+    
+E. Action Items for next meeting:
+    (1) Finish and implement regression-based EM model
+    (2) DLA needs to output examination and probability (?)
+    (3) Set up GAN and implement it
+        Note. Follow one of the paper we were originally provided to discretize clicks.
+    (4) Write Up: Methods is due next week
+        - Be as concrete as possible, so Harrie can give us good feedback before we start
+
+            
+            
+
+      
 
