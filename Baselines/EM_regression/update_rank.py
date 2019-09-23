@@ -7,6 +7,10 @@ DEBUG = False
 
 
 def update_fold_rank(fold):
+    """
+    Updates the ranking of the query document data structure accordingly to ranking obtain by the SVM
+    :param fold: test, train or validation
+    """
     with open('qd_' + fold + '.pickle', 'rb') as handle:
         qd = pk.load(handle)
 
