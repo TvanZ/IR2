@@ -93,7 +93,6 @@ if __name__ == "__main__":
 
     source_file = "test.weights"
     output_file = "test.padded_weights"
-    # TODO: fix order of padding with randomization
     pad_weights(target_file=source_file, output_filename=output_file)
 
     # types of randomization implemented
