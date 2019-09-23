@@ -1,4 +1,5 @@
 import numpy as np
+import pickle as pk
 from collections import defaultdict
 
 DATABASE_PATH = "./database/"
@@ -20,10 +21,10 @@ def compare_docs(doc1, doc2):
 def read_fold(fold):
     file = open(DATABASE_PATH + DATABASE_NAME + fold)
 
-    query_document = defaultdict(list)
+    query_document = defaultdict(dict)
 
-    k = 0
-    for line in file:
+    for idx, line in enumerate(file):
+        print(idx)
         line = line.split(' ')
         label = int(line[0])
         qid = int(line[1].split(':')[1])
@@ -36,26 +37,9 @@ def read_fold(fold):
             value = float(feature[1])
             features[id] = value
 
-        rank = len(query_document[qid])
         clicked = False
-        query_document[qid].append(
-            {'label': label, 'features': features, 'rank': rank, 'clicked': clicked})
+        query_document[qid][idx] = {'label': label, 'features': features, 'rank': None, 'clicked': clicked}
 
-        if k == 100:
-            break
-        k += 1
     return query_document
 
 
-documents = []
-
-fold = ".train.txt"
-query_document_train = read_fold(fold)
-
-fold = ".valid.txt"
-query_document_valid = read_fold(fold)
-
-fold = ".test.txt"
-query_document_test = read_fold(fold)
-
-print(query_document_train)
