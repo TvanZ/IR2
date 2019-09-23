@@ -227,6 +227,8 @@ class SimpleModel(ClickModel):
 	def sampleClick(self, rank, relevance_label):
 		if not relevance_label == int(relevance_label):
 			print('RELEVANCE LABEL MUST BE INTEGER!')
+		if relevance_label == -1:
+		    return 0,0,0,0
 		relevance_label = int(relevance_label) if relevance_label > 0 else 0
 		exam_p = self.getExamProb(rank)
 		r = random.random()

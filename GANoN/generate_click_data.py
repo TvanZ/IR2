@@ -3,6 +3,8 @@ import random
 import math
 import json
 import numpy as np
+import timeit
+from functools import partial
 
 import data_utils
 import click_models as cm
@@ -17,10 +19,10 @@ def generate_clicks(n, click_model, data):
         if sum(clicks) < 1:
             continue
         click_log.append(clicks)
-        relevance_log.append(ranking)
+        relevance_log.append(ranking[:])
         x += sum(clicks)
 
-    print(f'{x} clicks generated in {len(click_log)} sessions')
+    # print(f'{x} clicks generated in {len(click_log)} sessions')
     return click_log, relevance_log
 
 def main():
@@ -40,6 +42,9 @@ def main():
     # process dataset from file
     train_set = data_utils.read_data(INPUT_DATA_PATH, 'train', RANK_CUT)
     click_log, relevance_log = generate_clicks(1000000, click_model, train_set.gold_weights)
+    timeit_results = timeit.Timer(partial(generate_clicks, 1000000, click_model, train_set.gold_weights)).repeat(10, 1)
+    # print(timeit_results)
+    # print(sum(timeit_results)/10)
 
 if __name__ == '__main__':
     main()
