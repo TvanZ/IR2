@@ -132,7 +132,7 @@ def get_minibatch(batch_size, data):
 
 class GAN:
 	def __init__(self, click_model, rank_list_size, batch_size,
-	g_settings, d_settings, g_optimizer, d_optimizer, criterion = nn.BCELoss(),
+	g_settings, d_settings, g_optimizer, d_optimizer, criterion = nn.BCEWithLogitsLoss(),
 	forward_only=False, feed_previous = False):
 		self.click_model = click_model
 		self.rank_list_size = rank_list_size
