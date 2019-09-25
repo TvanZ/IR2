@@ -8,6 +8,13 @@ DEBUG = False
 
 
 def generate_click(rank, relevance):
+    """
+    Generates clicks form an observance and  relevance model
+
+    :param rank: position in the displayed list
+    :param relevance: relevance of the document accordingly to query
+    :return: True if 1/p > random and relevance >2 else if  True if 1/p*0.1 > random otherwise False
+    """
     if rank is None:
         return False
 
@@ -22,6 +29,10 @@ def generate_click(rank, relevance):
 
 
 def update_fold_click(fold):
+    """
+
+    Generates clicks for a given fold of the data set
+    """
     with open('qd_' + fold + '.pickle', 'rb') as handle:
         qd = pk.load(handle)
 

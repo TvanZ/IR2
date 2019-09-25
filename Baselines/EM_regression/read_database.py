@@ -19,6 +19,10 @@ def compare_docs(doc1, doc2):
 
 
 def read_fold(fold):
+    """
+
+    Reads a data set fold
+    """
     file = open(DATABASE_PATH + DATABASE_NAME + fold)
 
     query_document = defaultdict(dict)

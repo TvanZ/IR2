@@ -7,7 +7,7 @@ import pickle as pk
 from sklearn.ensemble import GradientBoostingRegressor
 
 NO_FEATURES = 700
-NO_ITERATIONS = 5
+NO_ITERATIONS = 100
 
 GBDT = GradientBoostingRegressor(learning_rate=0.2)
 
@@ -17,6 +17,17 @@ def sigmoid(x):
 
 
 def get_probability(examined, relevant, clicked, theta, gamma):
+    """
+    Calculates the probabilities needed for computed the marginals P(E=1|..) and P(R=1|..).
+
+
+    :param examined: boolean
+    :param relevant: boolean
+    :param clicked: boolean
+    :param theta: observance parameter
+    :param gamma: relevance parameter
+    :return:
+    """
     if examined and relevant and clicked:
         return 1.
     elif examined and not relevant and clicked:
@@ -43,11 +54,27 @@ def get_probability(examined, relevant, clicked, theta, gamma):
 
 
 def save(obj, name):
+    """
+    Saves a given object to results
+
+    :param obj: marginals, theta, predictions
+    :param name: filename
+    """
     with open("results/" + name + ".pickle", 'wb') as handle:
         pk.dump(obj, handle, protocol=pk.HIGHEST_PROTOCOL)
 
 
 def em_regression(query_document, top_n=10):
+    """
+    EM regression algorithm using GBDT regression for computing position bias (theta), marginals and predictions.
+    Note: the algorithm disregards unranked query-documents pairs
+
+    :param query_document: structured clicked log
+    :param top_n: number of how many first positions to handle
+    :return:
+    """
+
+    # initilization of the theta and gamma parameters, Theta with random distribution and gamma based on relevance
     Theta = np.random.rand(top_n)
     Gamma = defaultdict(dict)
     for qid in query_document.keys():
@@ -61,9 +88,13 @@ def em_regression(query_document, top_n=10):
     S_train = []
     S_target = []
     F = 0
+    P_E = defaultdict(dict)
+    P_R = defaultdict(dict)
+
     for _ in range(NO_ITERATIONS):
-        P_E = defaultdict(dict)
-        P_R = defaultdict(dict)
+
+        # Expectation computing stage, we compute the marginals P(E=1|..) and P(R=1|..)
+
         for qid in query_document.keys():
             querry = query_document[qid]
             for idx in querry.keys():
@@ -87,7 +118,7 @@ def em_regression(query_document, top_n=10):
                                                                                                              Gamma[
                                                                                                                  qid][
                                                                                                                  idx])
-
+        # sampeling binary for each ranked document query pair from the P(R=1|..) distribution
         S_train = []
         S_target = []
         for qid in query_document.keys():
@@ -108,7 +139,10 @@ def em_regression(query_document, top_n=10):
         S_train = np.stack(S_train)
         S_target = np.stack(S_target)
 
+        # regression using query documents features to the binary relevance
         F = GBDT.fit(S_train, S_target)
+
+        # Maximization stage, updating the parameters Theta and Gamma
         for k in range(0, top_n):
             theta_k = 0
             counter = 0
@@ -137,6 +171,8 @@ def em_regression(query_document, top_n=10):
         save(Theta, "theta")
         save(P_R, "rel_prob")
         save(P_E, "exm_prob")
+
+    # Compute if each query document pair is relevant or not
     preds = F.predict(S_train)
     save(preds, "preds")
     return Theta, preds, P_E, P_R
