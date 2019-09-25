@@ -188,36 +188,38 @@ class GAN:
 class Generator(nn.Module):
 	def __init__(self, input_size, hidden_size, hidden_size_2, output_size, fn, rank_cut):
 		super(Generator, self).__init__()
-		self.observance_GRU = nn.GRU(1, hidden_size, batch_first=True)
-		self.observance = nn.Sequential(
-			fn(),
-			nn.Linear(hidden_size, hidden_size),
-			fn(),
-			nn.Linear(hidden_size, 1),
-			fn(),
-			BinaryApproximator()
-		)
-		self.relevance_GRU = nn.GRU(2, hidden_size_2, batch_first=True)
-		self.relevance = nn.Sequential(
-			fn(),
-			nn.Linear(hidden_size_2, hidden_size_2),
-			fn(),
-			nn.Linear(hidden_size_2, 1),
-			fn(),
-			BinaryApproximator()
-		)
-		self.input_size = input_size
-		self.hidden_size = hidden_size
-		self.hidden_size_2 = hidden_size_2
+		# self.observance_GRU = nn.GRU(1, hidden_size, batch_first=True)
+		# self.observance = nn.Sequential(
+		# 	fn(),
+		# 	nn.Linear(hidden_size, hidden_size),
+		# 	fn(),
+		# 	nn.Linear(hidden_size, 1),
+		# 	fn(),
+		# 	BinaryApproximator()
+		# )
+		# self.relevance_GRU = nn.GRU(2, hidden_size_2, batch_first=True)
+		# self.relevance = nn.Sequential(
+		# 	fn(),
+		# 	nn.Linear(hidden_size_2, hidden_size_2),
+		# 	fn(),
+		# 	nn.Linear(hidden_size_2, 1),
+		# 	fn(),
+		# 	BinaryApproximator()
+		# )
+		self.binary_approximator = BinaryApproximator(rank_cut)
+		# self.input_size = input_size
+		# self.hidden_size = hidden_size
+		# self.hidden_size_2 = hidden_size_2
 		self.sampler = ClickSampler()
 
 	def forward(self, relevance_scores):
 		batch_size = relevance_scores.size()[0]
 		rank_size = relevance_scores.size()[1]
-		random_noise = torch.randn((batch_size, rank_size, 1), device=device)
-		h_0 = torch.zeros(1, batch_size, self.hidden_size).to(device)
-		observation_GRU,_ = self.observance_GRU(random_noise, h_0)
-		observation_scores = self.observance(observation_GRU).squeeze(dim=2)
+		random_noise = torch.rand((batch_size, rank_size), device=device)
+		# h_0 = torch.zeros(1, batch_size, self.hidden_size).to(device)
+		# observation_GRU,_ = self.observance_GRU(random_noise, h_0)
+		# observation_scores = self.observance(observation_GRU).squeeze(dim=2)
+		observation_scores = self.binary_approximator(random_noise)
 		fake_click_logs = self.sampler(observation_scores, relevance_scores)
 		# print('observations_scores inside generator:', observation_scores)
 		# modified_relevance = torch.cat((observation_scores,relevance_scores[:,:,None]), dim=2)
@@ -245,16 +247,31 @@ class Discriminator(nn.Module):
 	def forward(self, x):
 		return self.d(x)
 
+# class BinaryApproximator(nn.Module):
+# 	def __init__(self, log_alpha = 0, beta = 0.5, gamma = -0.1, zeta = 1.1):
+# 		super(BinaryApproximator, self).__init__()
+# 		self.log_alpha = log_alpha
+# 		self.beta = beta
+# 		self.gamma = gamma
+# 		self.zeta = zeta
+
+# 	def forward(self, u):
+# 		s = torch.sigmoid((torch.log(u) - torch.log(1 - u) + self.log_alpha)/self.beta)
+# 		mean_s = s * (self.zeta - self.gamma) + self.gamma
+# 		binarysize = mean_s.size()
+# 		z = torch.min(torch.ones(binarysize, device=device),(torch.max(torch.zeros(binarysize, device=device),mean_s)))
+# 		return z
+
 class BinaryApproximator(nn.Module):
-	def __init__(self, log_alpha = 0, beta = 0.5, gamma = -0.1, zeta = 1.1):
+	def __init__(self, input_size, gamma = -0.1, zeta = 1.1):
 		super(BinaryApproximator, self).__init__()
-		self.log_alpha = log_alpha
-		self.beta = beta
+		self.log_alpha = nn.Parameter(torch.rand((1,input_size)))
+		self.beta = nn.Parameter(torch.rand((1,input_size)))
 		self.gamma = gamma
 		self.zeta = zeta
 
 	def forward(self, u):
-		s = torch.sigmoid((torch.log(u) - torch.log(1 - u) + self.log_alpha)/self.beta)
+		s = torch.sigmoid((torch.log(u) - torch.log(1 - u) + self.log_alpha)/torch.exp(self.beta))
 		mean_s = s * (self.zeta - self.gamma) + self.gamma
 		binarysize = mean_s.size()
 		z = torch.min(torch.ones(binarysize, device=device),(torch.max(torch.zeros(binarysize, device=device),mean_s)))
