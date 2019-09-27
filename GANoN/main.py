@@ -88,7 +88,8 @@ def main():
 		for mini_batch in get_minibatch(BATCH_SIZE, list(zip(click_logs, rankings))):
 			real_error, fake_error, g_error = gan.train(*mini_batch)
 		_, rankings_tensor = mini_batch
-		observations, clicks = gan.G(rankings_tensor[-1:,:])
+		observations, clicks = gan.G(rankings_tensor)
+		observations=torch.sum(observations,dim=0)/BATCH_SIZE
 		# for param in gan.G.parameters():
 		#     print(param.data)
 		# print('input rankings:', rankings_tensor[-1:,:])
