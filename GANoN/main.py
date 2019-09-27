@@ -13,6 +13,8 @@ import click_models as cm
 from generate_click_data import generate_clicks
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+standard_dtype = torch.double
+torch.set_default_dtype(standard_dtype)
 
 def main():
 	# the click model in json format as exported when creating a model with the click_models.py
@@ -87,9 +89,11 @@ def main():
 			real_error, fake_error, g_error = gan.train(*mini_batch)
 		_, rankings_tensor = mini_batch
 		observations, clicks = gan.G(rankings_tensor[-1:,:])
-		print('input rankings:', rankings_tensor[-1:,:])
+		# for param in gan.G.parameters():
+		#     print(param.data)
+		# print('input rankings:', rankings_tensor[-1:,:])
 		print('observations:', observations)
-		print('clicks:', clicks)
+		# print('clicks:', clicks)
 		print(f"[{epoch + 1}/{num_epochs}] | Loss D: {real_error + fake_error} | Loss G: {g_error}")
 		# print('real_error', real_error)
 		# print('fake_error', fake_error)
@@ -111,9 +115,6 @@ def get_minibatch(batch_size, data):
 		click_logs, rankings = zip(*batch)
 		click_logs = list(click_logs)
 		rankings = list(rankings)
-		# print(click_logs)
-		# print(rankings)
-		# print(len(click_logs), len(rankings))
 		# add padding
 		for i in range(len(batch)):
 			if len(click_logs[i]) < 10:
@@ -123,11 +124,8 @@ def get_minibatch(batch_size, data):
 			if len(rankings[i]) < 10:
 				rankings[i] += [-1.] * len_dif
 
-		click_logs_tensor = torch.FloatTensor(click_logs).to(device)
-		# print(click_logs_tensor)
-		rankings_tensor = torch.FloatTensor(rankings).to(device)
-		# print(rankings_tensor)
-		# print('batch delivered')
+		click_logs_tensor = torch.Tensor(click_logs).to(device)
+		rankings_tensor = torch.Tensor(rankings).to(device)
 		yield click_logs_tensor, rankings_tensor
 
 class GAN:
@@ -143,8 +141,8 @@ class GAN:
 
 		self.G = Generator(g['input_size'], g['hidden_size'], g['hidden_size_2'], g['output_size'], g['fn'], rank_list_size)
 		self.D = Discriminator(d['input_size'], d['hidden_size'], d['output_size'], d['fn'])
-		self.d_optimizer = d_optimizer(self.D.parameters())
-		self.g_optimizer = g_optimizer(self.G.parameters())
+		self.d_optimizer = d_optimizer(self.D.parameters(),lr=0.0001, eps=1e-4)
+		self.g_optimizer = g_optimizer(self.G.parameters(),lr=0.0002, eps=1e-4)
 		self.criterion = criterion
 		self.g_steps = g['steps']
 		self.d_steps = d['steps']
@@ -152,33 +150,26 @@ class GAN:
 
 	def train(self, click_logs, rankings):
 		half = int(math.floor(len(click_logs)/2))
-		# for d_index in range(self.d_steps):
 		# first train the discriminator
 		self.D.zero_grad()
 		# train on real data
 		real_decision = self.D(click_logs[:half,:])
-		# print('real_decision:', real_decision)
 		real_error = self.criterion(real_decision, torch.ones(real_decision.size(), device=device))
 		real_error.backward()
 		# train on fake data
 		fake_observations, fake_data = self.G(rankings[half:,:])
-		# print('fake_data:', fake_data)
-		fake_decision = self.D(fake_data.detach())
-		# print('fake_decision:', fake_decision)
+		fake_decision = self.D(fake_data.detach()) # detach the fake data so the generator does not get updated here
 		fake_error = self.criterion(fake_decision, torch.zeros(fake_decision.size(), device=device))
 		fake_error.backward()
 		self.d_optimizer.step()
 
-		# for g_index in range(self.g_steps):
 		# then train the generator
 		self.G.zero_grad()
-		# generate fake examples
-		# g_fake_observations, g_fake_data = self.G(rankings[:half,:,:])
 		g_fake_decision = self.D(fake_data)
-		# print('g_fake_decision:', g_fake_decision)
 		g_error = self.criterion(g_fake_decision, torch.ones(g_fake_decision.size(), device=device))
 		g_error.backward()
 		self.g_optimizer.step()
+
 		return real_error.item(), fake_error.item(), g_error.item()
 
 	def to(self, device):
@@ -188,48 +179,15 @@ class GAN:
 class Generator(nn.Module):
 	def __init__(self, input_size, hidden_size, hidden_size_2, output_size, fn, rank_cut):
 		super(Generator, self).__init__()
-		# self.observance_GRU = nn.GRU(1, hidden_size, batch_first=True)
-		# self.observance = nn.Sequential(
-		# 	fn(),
-		# 	nn.Linear(hidden_size, hidden_size),
-		# 	fn(),
-		# 	nn.Linear(hidden_size, 1),
-		# 	fn(),
-		# 	BinaryApproximator()
-		# )
-		# self.relevance_GRU = nn.GRU(2, hidden_size_2, batch_first=True)
-		# self.relevance = nn.Sequential(
-		# 	fn(),
-		# 	nn.Linear(hidden_size_2, hidden_size_2),
-		# 	fn(),
-		# 	nn.Linear(hidden_size_2, 1),
-		# 	fn(),
-		# 	BinaryApproximator()
-		# )
 		self.binary_approximator = BinaryApproximator(rank_cut)
-		# self.input_size = input_size
-		# self.hidden_size = hidden_size
-		# self.hidden_size_2 = hidden_size_2
 		self.sampler = ClickSampler()
 
 	def forward(self, relevance_scores):
 		batch_size = relevance_scores.size()[0]
 		rank_size = relevance_scores.size()[1]
 		random_noise = torch.rand((batch_size, rank_size), device=device)
-		# h_0 = torch.zeros(1, batch_size, self.hidden_size).to(device)
-		# observation_GRU,_ = self.observance_GRU(random_noise, h_0)
-		# observation_scores = self.observance(observation_GRU).squeeze(dim=2)
 		observation_scores = self.binary_approximator(random_noise)
 		fake_click_logs = self.sampler(observation_scores, relevance_scores)
-		# print('observations_scores inside generator:', observation_scores)
-		# modified_relevance = torch.cat((observation_scores,relevance_scores[:,:,None]), dim=2)
-		# modified_relevance = (observation_scores * relevance_scores)[:,:,None]
-		# print('modified relevance:', modified_relevance)
-		# h_0 = torch.zeros(1, batch_size, self.hidden_size_2).to(device)
-		# fake_click_logs, _ = self.relevance_GRU(modified_relevance, h_0)
-		# fake_click_logs = self.relevance(fake_click_logs).squeeze(dim=2)
-		# click_scores = self.relevance(relevance_scores)
-		# fake_click_logs = observation_scores * click_scores
 		return observation_scores, fake_click_logs
 
 class Discriminator(nn.Module):
@@ -240,42 +198,33 @@ class Discriminator(nn.Module):
 			fn(),
 			nn.Linear(hidden_size, hidden_size),
 			fn(),
-			nn.Linear(hidden_size, output_size),
-			fn()
+			nn.Linear(hidden_size, output_size)
 		)
 
 	def forward(self, x):
 		return self.d(x)
 
-# class BinaryApproximator(nn.Module):
-# 	def __init__(self, log_alpha = 0, beta = 0.5, gamma = -0.1, zeta = 1.1):
-# 		super(BinaryApproximator, self).__init__()
-# 		self.log_alpha = log_alpha
-# 		self.beta = beta
-# 		self.gamma = gamma
-# 		self.zeta = zeta
-
-# 	def forward(self, u):
-# 		s = torch.sigmoid((torch.log(u) - torch.log(1 - u) + self.log_alpha)/self.beta)
-# 		mean_s = s * (self.zeta - self.gamma) + self.gamma
-# 		binarysize = mean_s.size()
-# 		z = torch.min(torch.ones(binarysize, device=device),(torch.max(torch.zeros(binarysize, device=device),mean_s)))
-# 		return z
-
 class BinaryApproximator(nn.Module):
-	def __init__(self, input_size, gamma = -0.1, zeta = 1.1):
+	def __init__(self, input_size, clip_value = 1e-4, gamma = -0.1, zeta = 1.1):
 		super(BinaryApproximator, self).__init__()
-		self.log_alpha = nn.Parameter(torch.rand((1,input_size)))
+		self.log_alpha = nn.Parameter(torch.randn((1,input_size)))
 		self.beta = nn.Parameter(torch.rand((1,input_size)))
 		self.gamma = gamma
 		self.zeta = zeta
+		self.clip_value = clip_value
 
 	def forward(self, u):
-		s = torch.sigmoid((torch.log(u) - torch.log(1 - u) + self.log_alpha)/torch.exp(self.beta))
+		# make sure the weights of beta are larger than 0
+		self._clip_beta()
+		# now go through the forward part
+		s = torch.sigmoid((torch.log(u) - torch.log(1 - u) + self.log_alpha)/self.beta)
 		mean_s = s * (self.zeta - self.gamma) + self.gamma
 		binarysize = mean_s.size()
 		z = torch.min(torch.ones(binarysize, device=device),(torch.max(torch.zeros(binarysize, device=device),mean_s)))
 		return z
+
+	def _clip_beta(self):
+		self.beta.data = torch.clamp(self.beta.data, min=self.clip_value)
 
 class ClickSampler(nn.Module):
 	def __init__(self, relevance_threshold = 3):
@@ -289,4 +238,6 @@ class ClickSampler(nn.Module):
 		return click_logs * observation_scores
 
 if __name__ == "__main__":
+	if device == 'cuda':
+		torch.cuda.empty_cache()
 	main()
