@@ -5,7 +5,8 @@ import random, json
 def loadModelFromJson(model_desc):
     modeltypes = {"user_browsing_model": UserBrowsingModel(),
                   "simple_model": SimpleModel(),
-                  "position_biased_model": PositionBiasedModel()
+                  "position_biased_model": PositionBiasedModel(),
+                  "cascade_model": CascadeModel
                   }
 
     click_model = modeltypes[model_desc['model_name']]
@@ -200,7 +201,7 @@ class CascadeModel(ClickModel):
         return 'cascade-model'
 
     def setExamProb(self, eta):
-        pass
+        self.eta = eta
 
     def sampleClicksForOneList(self, label_list):
         click_list, exam_p_list, click_p_list, exam_list = [], [], [], []
@@ -217,7 +218,17 @@ class CascadeModel(ClickModel):
         return click_list, exam_p_list, click_p_list, exam_list
 
     def estimatePropensityWeightsForOneList(self, click_list, use_non_clicked_data=False):
-        pass
+        epsilon = 1E-5
+        propensity_weights = []
+        last_click_rank = -1
+        for r in range(len(click_list)):
+            pw = 0.0
+            if use_non_clicked_data | click_list[r] > 0:
+                pw = 1.0 / (self.getExamProb(r, last_click_rank) + epsilon)
+            if click_list[r] > 0:
+                last_click_rank = r
+            propensity_weights.append(pw)
+        return propensity_weights
 
     def sampleClick(self, was_clicked, relevance_label):
         if was_clicked:

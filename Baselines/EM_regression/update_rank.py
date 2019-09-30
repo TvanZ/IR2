@@ -6,7 +6,7 @@ DATABASE = "./database/"
 DEBUG = False
 
 
-def update_fold_rank(fold):
+def update_fold_rank(fold, click_model):
     """
     Updates the ranking of the query document data structure accordingly to ranking obtain by the SVM
     :param fold: test, train or validation
@@ -27,5 +27,6 @@ def update_fold_rank(fold):
         print(qd[31074][32278]['features'][16])
 
     if not DEBUG:
-        with open('qd_' + fold + '.pickle', 'wb') as handle:
+        with open('qd_' + fold + '_' + click_model + '.pickle', 'wb') as handle:
             pk.dump(qd, handle, protocol=pk.HIGHEST_PROTOCOL)
+    print(fold + " rank done!")
