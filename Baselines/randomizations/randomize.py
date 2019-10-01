@@ -5,11 +5,11 @@ import numpy as np
 # just something Bella has to do, because of PyCharm settings
 data_group = ["train", "test"]
 # TODO: make some argument parser for this at some point?
-selected_data_group = data_group[1]
+selected_data_group = data_group[0]
 
 dir_filepath = os.path.join("randomizations",
                                 "Input_Data",
-                                data_group[1])
+                                selected_data_group)
 os.chdir(dir_filepath)
 
 
@@ -78,7 +78,7 @@ if __name__ == "__main__":
 
     # types of randomization implemented
     options = ["RandTopN", "RandPair"]
-    selected_option = options[1]
+    selected_option = options[0]
 
     # creating filename
     randomized_filename = "{}.randomized_{}_weights".format(selected_data_group, selected_option)
