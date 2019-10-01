@@ -7,7 +7,7 @@ import pickle as pk
 from sklearn.ensemble import GradientBoostingRegressor
 
 NO_FEATURES = 700
-NO_ITERATIONS = 100
+NO_ITERATIONS = 2
 
 GBDT = GradientBoostingRegressor(learning_rate=0.2)
 
@@ -64,7 +64,7 @@ def save(obj, name):
         pk.dump(obj, handle, protocol=pk.HIGHEST_PROTOCOL)
 
 
-def em_regression(query_document, top_n=10):
+def em_regression(query_document, click_model, top_n=10):
     """
     EM regression algorithm using GBDT regression for computing position bias (theta), marginals and predictions.
     Note: the algorithm disregards unranked query-documents pairs
@@ -91,7 +91,7 @@ def em_regression(query_document, top_n=10):
     P_E = defaultdict(dict)
     P_R = defaultdict(dict)
 
-    for _ in range(NO_ITERATIONS):
+    for it in range(NO_ITERATIONS):
 
         # Expectation computing stage, we compute the marginals P(E=1|..) and P(R=1|..)
 
@@ -168,11 +168,12 @@ def em_regression(query_document, top_n=10):
                 rank = doc['rank']
                 if rank is not None:
                     Gamma[qid][idx] = sigmoid(F.predict(features.reshape(1, 700)))
-        save(Theta, "theta")
-        save(P_R, "rel_prob")
-        save(P_E, "exm_prob")
+        save(Theta, "theta_" + click_model)
+        save(P_R, "rel_prob_" + click_model)
+        save(P_E, "exm_prob_" + click_model)
+        print("iteration: "+str(it)+" done")
 
     # Compute if each query document pair is relevant or not
     preds = F.predict(S_train)
-    save(preds, "preds")
+    save(preds, "preds_" + click_model)
     return Theta, preds, P_E, P_R

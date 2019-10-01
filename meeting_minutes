@@ -106,7 +106,58 @@ E. Action Items for next meeting:
     (4) Write Up: Methods is due next week
         - Be as concrete as possible, so Harrie can give us good feedback before we start
 
-            
+———————————————————————————————————————————————————————————————————————————————————————————————————
+Advisor Meeting No. 3
+Wednesday: September 25th, 2019
+———————————————————————————————————————————————————————————————————————————————————————————————————
+A.) Mid-term Presentation:
+    - Someone else will be there, since we get graded from the feedback of at least 2 people
+    - We have 10 minutes to present, and 5 team members
+        - Thus, we don’t need to equally divide up the presentation. It's perfectly acceptable for 2-3 people to present.
+        Ideally, the other team members will answer questions.
+        
+B.) Write Up Feedback
+    - Regarding our question: "When we discretize the generator’s probability as either a zero or one using the
+    methodology disccused in Paper 6, we sometimes can values that aren’t zero or one. (Assuming we correctly implemented
+    the author's discretization method.) Is this something we need to correct/take some measure against? Or, will 
+    the discriminator just learn that these clicks are clearly fake and push the generator to produce strictly 
+    binary clicks?"
+        - It appears that our binary discretizer is fine.
+        - (!) This is something we should add to our report. Harrie and Maarten had a question about this as this has 
+        never been explored in literature before.
+    - Put click models into background, not methods, since the Methods section focuses on what you’re introducing
+        - Describe what was done next time —even if we know that it's not final —just to make it easier for Harrie
+        to spot any mistakes we may have made.
+        - It would've saved us a lot of time during our meeting 
+
+  
+C.) Advise regarding our GAN
+    - The network will likely want everything to be observed
+    - New research question: Is it possible to learn relevance (not hard code)?
+        - Right now, our model only works for hard-coded relevance. If we try to learn it, we're getting position bias.
+        (If I understood the last part correctly.)
+    - After 2 epochs of training, discretize only outputs zeroes or ones
+        - However, it sometimes gets stuck once something is a one or zero. We don't know if either: (a) Our GAN is 
+        getting stuck, or (b) The GAN will leave this local optimum if we train it long enough.
+            - Harrie’s advice
+                - Conduct a simple experiment, where we predict 2 clicks, do some epochs on that one instance, 
+                then see if those clicks get flipped after a while
+                    - If it can’t make that flip, something is wrong….
+                    - According to Harrie: It will likely make the flip, but after a long time.
+    - Description of generator architecture 
+        -Random noise —> GRU —> linear layer(s) —> (x, y) as x is observance, and y is relevance score —> click decisions
+        -Loss: used BCE (approved by advisor)
+    - We expect GAN to learn position bias…
+        - …now figure out whether or not it does that
+        - Make it simpler: don’t need GRU neural net
+            - Just do it for every position
+    - Goal = Learn the distribution…not network parameters 
+        - i.e., f(mu, alpha, beta)
+
+D.) Regression-based EM:
+    - In regards to verifying our regression-based EM model,
+        - The only way to know if this is correct is to put in really easy toy data
+        - Just do that and move on
             
 
       

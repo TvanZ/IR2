@@ -28,7 +28,6 @@ def read_fold(fold):
     query_document = defaultdict(dict)
 
     for idx, line in enumerate(file):
-        print(idx)
         line = line.split(' ')
         label = int(line[0])
         qid = int(line[1].split(':')[1])
