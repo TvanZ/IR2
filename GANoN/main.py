@@ -68,8 +68,8 @@ def main():
 	}
 
 	d_settings = {
-		'input_size': 10,
-		'hidden_size': 100,
+		'input_size': 20,
+		'hidden_size': 50,
 		'output_size': 1,
 		'fn': nn.Sigmoid,
 		'steps': 20
@@ -88,14 +88,15 @@ def main():
 		for mini_batch in get_minibatch(BATCH_SIZE, list(zip(click_logs, rankings))):
 			real_error, fake_error, g_error = gan.train(*mini_batch)
 		_, rankings_tensor = mini_batch
-		observations, clicks = gan.G(rankings_tensor)
-		observations=torch.sum(observations,dim=0)/BATCH_SIZE
+		with torch.no_grad():
+			observations, clicks = gan.G(rankings_tensor) 
+		observations=torch.mean(observations,dim=0)
 		# for param in gan.G.parameters():
 		#     print(param.data)
 		# print('input rankings:', rankings_tensor[-1:,:])
 		print('observations:', observations)
 		# print('clicks:', clicks)
-		print(f"[{epoch + 1}/{num_epochs}] | Loss D: {real_error + fake_error} | Loss G: {g_error}")
+		print(f"[{epoch + 1}/{num_epochs}] | Loss D: {(real_error + fake_error)/2} | Loss G: {g_error}")
 		# print('real_error', real_error)
 		# print('fake_error', fake_error)
 		# print('g_error', g_error)
@@ -143,7 +144,7 @@ class GAN:
 		self.G = Generator(g['input_size'], g['hidden_size'], g['hidden_size_2'], g['output_size'], g['fn'], rank_list_size)
 		self.D = Discriminator(d['input_size'], d['hidden_size'], d['output_size'], d['fn'])
 		self.d_optimizer = d_optimizer(self.D.parameters(),lr=0.0001, eps=1e-4)
-		self.g_optimizer = g_optimizer(self.G.parameters(),lr=0.0002, eps=1e-4)
+		self.g_optimizer = g_optimizer(self.G.parameters(),lr=0.0005, eps=1e-4)
 		self.criterion = criterion
 		self.g_steps = g['steps']
 		self.d_steps = d['steps']
@@ -154,19 +155,27 @@ class GAN:
 		# first train the discriminator
 		self.D.zero_grad()
 		# train on real data
-		real_decision = self.D(click_logs[:half,:])
-		real_error = self.criterion(real_decision, torch.ones(real_decision.size(), device=device))
+		true_data = torch.cat((click_logs[:half,:], rankings[:half,:]), dim=1)
+		real_decision = self.D(true_data)
+		real_error = self.criterion(real_decision, torch.ones(real_decision.size(), device=device)  + torch.rand(real_decision.size(), device=device) *.3 - 0.2)
+		#SWAPPING LABELS
+		#real_error = self.criterion(real_decision, torch.zeros(real_decision.size(), device=device))
 		real_error.backward()
 		# train on fake data
 		fake_observations, fake_data = self.G(rankings[half:,:])
-		fake_decision = self.D(fake_data.detach()) # detach the fake data so the generator does not get updated here
-		fake_error = self.criterion(fake_decision, torch.zeros(fake_decision.size(), device=device))
+		fake_all = torch.cat((fake_data.detach(), rankings[half:,:]), dim=1)
+		fake_decision = self.D(fake_all) # detach the fake data so the generator does not get updated here
+		fake_error = self.criterion(fake_decision, torch.zeros(fake_decision.size(), device=device) + torch.rand(fake_decision.size(), device=device) *.3)
+		#SWAPPING LABELS
+		#fake_error = self.criterion(fake_decision, torch.ones(fake_decision.size(), device=device))
 		fake_error.backward()
 		self.d_optimizer.step()
 
 		# then train the generator
 		self.G.zero_grad()
-		g_fake_decision = self.D(fake_data)
+		fake2_all = torch.cat((fake_data, rankings[half:,:]), dim=1)
+		g_fake_decision = self.D(fake2_all)
+		
 		g_error = self.criterion(g_fake_decision, torch.ones(g_fake_decision.size(), device=device))
 		g_error.backward()
 		self.g_optimizer.step()
@@ -180,7 +189,7 @@ class GAN:
 class Generator(nn.Module):
 	def __init__(self, input_size, hidden_size, hidden_size_2, output_size, fn, rank_cut):
 		super(Generator, self).__init__()
-		self.binary_approximator = BinaryApproximator(rank_cut)
+		self.binary_approximator = BinaryApproximator(rank_cut, beta = 1e-3)
 		self.sampler = ClickSampler()
 
 	def forward(self, relevance_scores):
@@ -206,17 +215,21 @@ class Discriminator(nn.Module):
 		return self.d(x)
 
 class BinaryApproximator(nn.Module):
-	def __init__(self, input_size, clip_value = 1e-4, gamma = -0.1, zeta = 1.1):
+	def __init__(self, input_size, clip_value = 1e-4, gamma = -0.1, zeta = 1.1, beta = None):
 		super(BinaryApproximator, self).__init__()
 		self.log_alpha = nn.Parameter(torch.randn((1,input_size)))
-		self.beta = nn.Parameter(torch.rand((1,input_size)))
+		if beta:    	    
+			self.beta = float(beta)
+		else:
+			self.beta = nn.Parameter(torch.rand((1,input_size)))
 		self.gamma = gamma
 		self.zeta = zeta
 		self.clip_value = clip_value
 
 	def forward(self, u):
 		# make sure the weights of beta are larger than 0
-		self._clip_beta()
+		if type(self.beta) != float:
+			self._clip_beta()
 		# now go through the forward part
 		s = torch.sigmoid((torch.log(u) - torch.log(1 - u) + self.log_alpha)/self.beta)
 		mean_s = s * (self.zeta - self.gamma) + self.gamma

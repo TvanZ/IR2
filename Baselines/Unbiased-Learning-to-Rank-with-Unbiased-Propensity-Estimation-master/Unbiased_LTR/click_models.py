@@ -180,7 +180,7 @@ class ObservanceRelevanceModel(ClickModel):
 			click_list.append(click)
 			exam_p_list.append(exam_p)
 			click_p_list.append(click_p)
-		return click_list, exam_p_list, click_p_list
+	    return click_list, exam_p_list, click_p_list
 
 	def estimatePropensityWeightsForOneList(self, click_list, use_non_clicked_data=False):
 		pass
