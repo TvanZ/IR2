@@ -9,21 +9,24 @@ from functools import partial
 import data_utils
 import click_models as cm
 
-def generate_clicks(n, click_model, data):
+def generate_clicks(n, click_model, data, features):
     x = 0
     click_log = []
     relevance_log = []
+    feature_log = []
     while x < n:
-        ranking = random.choice(data)
+        choice = random.choice(list(zip(data, features)))
+        ranking, feature = choice
         clicks,_,_,_ = click_model.sampleClicksForOneList(ranking)
         if sum(clicks) < 1:
             continue
         click_log.append(clicks)
         relevance_log.append(ranking[:])
+        feature_log.append(feature[:][:])
         x += sum(clicks)
 
     # print(f'{x} clicks generated in {len(click_log)} sessions')
-    return click_log, relevance_log
+    return click_log, relevance_log, feature_log
 
 def main():
     CLICK_MODEL_JSON = sys.argv[1]
@@ -41,8 +44,8 @@ def main():
 
     # process dataset from file
     train_set = data_utils.read_data(INPUT_DATA_PATH, 'train', RANK_CUT)
-    click_log, relevance_log = generate_clicks(1000000, click_model, train_set.gold_weights)
-    timeit_results = timeit.Timer(partial(generate_clicks, 1000000, click_model, train_set.gold_weights)).repeat(10, 1)
+    click_log, relevance_log, feature_log = generate_clicks(1000000, click_model, train_set.gold_weights, train_set.featuredids)
+    timeit_results = timeit.Timer(partial(generate_clicks, 1000000, click_model, train_set.gold_weights, train_set.featuredids)).repeat(10, 1)
     # print(timeit_results)
     # print(sum(timeit_results)/10)
 

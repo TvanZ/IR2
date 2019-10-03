@@ -17,6 +17,8 @@
 import json
 import random
 import os
+import math
+from collections import defaultdict
 
 
 class Raw_data:
@@ -25,6 +27,7 @@ class Raw_data:
 			self.embed_size = -1
 			self.rank_list_size = -1
 			self.features = []
+			self.featuredids = []
 			self.dids = []
 			self.initial_list = []
 			self.qids = []
@@ -39,14 +42,28 @@ class Raw_data:
 
 		self.features = []
 		self.dids = []
+		self.featuredids = []
+		self.query_sesh = defaultdict(int)
+
+		i = 0
+		b = -1
 		feature_fin = open(data_path + file_prefix + '/' + file_prefix + '.feature')
 		for line in feature_fin:
 			arr = line.strip().split(' ')
+			sesh = arr[0].split('_')
+			if (self.query_sesh[sesh[1]] == 0):
+				self.query_sesh[sesh[1]] = 1
+				self.featuredids.append([])
+				b += 1
+				i = 0
 			self.dids.append(arr[0])
 			self.features.append([0.0 for _ in range(self.embed_size)])
+			self.featuredids[b].append([0.0 for _ in range(self.embed_size)])
 			for x in arr[1:]:
 				arr2 = x.split(':')
 				self.features[-1][int(arr2[0])] = float(arr2[1])
+				self.featuredids[b][i][int(arr2[0])] = float(arr2[1])
+			i += 1
 		feature_fin.close()
 
 
