@@ -18,7 +18,7 @@ position_bias_generator = PositionBiasedModel()
 
 
 def generate_position_biased_click(rank, relevance_label):
-    click, _, _, _ = position_bias_generator.sampleClick(rank, relevance_label)
+    click, _, _ = position_bias_generator.sampleClick(rank, relevance_label)
     return click == 1
 
 
@@ -32,19 +32,51 @@ def generate_cascade_click(was_clicked, relevance_label):
     return click == 1
 
 
-def generate_click(doc, click_model, clicked):
+def reset(qd):
+    for qid in qd.keys():
+        query = qd[qid]
+        for idx in query.keys():
+            qd[qid][idx]['clicked'] = False
+
+
+def generate_clicks(qd, qid, click_model):
+    query = qd[qid]
     if click_model == CASCADE_MODEL:
-        rel = doc['label']
-        return generate_cascade_click(clicked, rel)
+        current_rank = 0
+        clicked = False
+
+        ranking = [0 for _ in range(10)]
+        maxi = 0
+        for idx in query.keys():
+            doc = query[idx]
+            rank = doc['rank']
+            if rank is not None:
+                maxi += 1
+                ranking[rank - 1] = idx
+
+        while not clicked and current_rank < maxi:
+            idx = ranking[current_rank]
+            doc = query[idx]
+            rel = doc['label']
+            clicked = generate_cascade_click(clicked, rel)
+            qd[qid][idx]['clicked'] = clicked
+            current_rank += 1
+
     if click_model == SIMPLE_MODEL:
-        rel = doc['label']
-        rank = doc['rank']
-        return generate_simple_click(rank, rel)
+        for idx in query.keys():
+            doc = query[idx]
+            rel = doc['label']
+            rank = doc['rank']
+            clicked = generate_simple_click(rank, rel)
+            qd[qid][idx]['clicked'] = clicked
+
     if click_model == POSITION_BIASED_MODEL:
-        rel = doc['label']
-        rank = doc['rank']
-        return generate_position_biased_click(rank, rel)
-    return False
+        for idx in query.keys():
+            doc = query[idx]
+            rel = doc['label']
+            rank = doc['rank']
+            clicked = generate_simple_click(rank, rel)
+            qd[qid][idx] = clicked
 
 
 def update_fold_click(fold, click_model):
@@ -55,13 +87,9 @@ def update_fold_click(fold, click_model):
     with open('qd_' + fold + '.pickle', 'rb') as handle:
         qd = pk.load(handle)
 
+    reset(qd)
     for qid in qd.keys():
-        querry = qd[qid]
-        clicked = False
-        for idx in querry.keys():
-            doc = querry[idx]
-            clicked = generate_click(doc, click_model, clicked)
-            qd[qid][idx]['clicked'] = clicked
+        generate_clicks(qd, qid, click_model)
 
     if DEBUG:
         k = 0
@@ -69,7 +97,7 @@ def update_fold_click(fold, click_model):
             for idx in qd[qid].keys():
                 clicked = qd[qid][idx]["clicked"]
                 rank = qd[qid][idx]["rank"]
-                if rank is not None and rank > 0 and clicked:
+                if rank is not None and rank > 0:
                     print("qid:" + str(qid) + "idx: " + str(idx) + " clicked: " + str(clicked) + " rank: " + str(rank))
 
     if not DEBUG:
