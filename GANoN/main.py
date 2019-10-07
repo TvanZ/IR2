@@ -98,13 +98,13 @@ def main():
 		"g":{
 		'generator': Generator2,
 		'input_size' : 700,
-		'hidden_size' : 20,
+		'hidden_size' : 300,
 		'output_size' : 1,
 		'fn': nn.Sigmoid
 		},
 		"d":{
 		'input_size': 7010,
-		'hidden_size': 50,
+		'hidden_size': 300,
 		'output_size': 1,
 		'fn': nn.Sigmoid
 		},
@@ -118,7 +118,7 @@ def main():
 		g_optimizer = optim.Adam
 		d_optimizer = optim.Adam
 
-		gan = GAN(click_model, 10, BATCH_SIZE, PBM_settings_Hardcoded, g_optimizer, d_optimizer)
+		gan = GAN(click_model, 10, BATCH_SIZE, model_settings, g_optimizer, d_optimizer)
 		gan.to(device)
 
 		num_epochs = 100
@@ -127,11 +127,13 @@ def main():
 			for mini_batch in get_minibatch(BATCH_SIZE, EMBED_SIZE, RANK_CUT, list(zip(click_logs, rankings, features))):
 				click_logs_T, rankings_T, features_T = mini_batch
 				if not model_settings['feature']:
-					real_error, fake_error, g_error = gan.train(click_logs_T, rankings_T)
+					real_error, fake_error, g_error = gan.train_with_log(click_logs_T, rankings_T)
 				else:
 					real_error, fake_error, g_error = gan.train(click_logs_T, features_T)
-			_, rankings_tensor, _ = mini_batch
+			_, rankings_tensor, features_tensor = mini_batch
 			with torch.no_grad():
+				if model_settings['feature']:
+					rankings_tensor = features_tensor
 				observations, clicks = gan.G(rankings_tensor) 
 			observations=torch.mean(observations,dim=0)
 
@@ -176,7 +178,7 @@ def get_minibatch(batch_size, embed_size, rank_cut, data):
 
 
 		click_logs_tensor = torch.Tensor(click_logs).to(device)
-		rankings_tensor = torch.Tensor(rankings).to(device)
+		rankings_tensor = torch.Tensor(rankings).to(device)[:,:,None]
 		feature_tensor = torch.Tensor(features).to(device)
 		yield click_logs_tensor, rankings_tensor, feature_tensor
 
@@ -194,23 +196,24 @@ class GAN:
 
 		self.G = generator(g['input_size'], g['hidden_size'], g['output_size'], g['fn'], rank_list_size)
 		self.D = Discriminator(d['input_size'], d['hidden_size'], d['output_size'], d['fn'])
-		self.d_optimizer = d_optimizer(self.D.parameters(),lr=0.0001, eps=1e-4)
-		self.g_optimizer = g_optimizer(self.G.parameters(),lr=0.0005, eps=1e-4)
+		self.d_optimizer = d_optimizer(self.D.parameters(),lr=0.0001)
+		self.g_optimizer = g_optimizer(self.G.parameters(),lr=0.0005)
 		self.criterion = criterion
 		self.errors = []
 
 	def train(self, click_logs, rankings):
-		half = int(math.floor(len(click_logs)/2))
 		# first train the discriminator
 		self.D.zero_grad()
 		# train on real data
-		true_data = torch.cat((click_logs[:half,:], rankings[:half,:]), dim=1)
+		rankings_1, rankings_2 = torch.chunk(rankings, 2)
+		click_logs_1, click_logs_2 = torch.chunk(click_logs,2)
+		true_data = torch.cat((click_logs_1, rankings_1.view(rankings_1.size()[0], -1)), dim=1)
 		real_decision = self.D(true_data)
 		real_error = self.criterion(real_decision, torch.ones(real_decision.size(), device=device)  + torch.rand(real_decision.size(), device=device) *.3 - 0.2)
 		real_error.backward()
 		# train on fake data
-		fake_observations, fake_data = self.G(rankings[half:,:])
-		fake_all = torch.cat((fake_data.detach(), rankings[half:,:]), dim=1)
+		fake_observations, fake_data = self.G(rankings_2)
+		fake_all = torch.cat((fake_data.detach(), rankings_2.view(rankings_2.size()[0], -1)), dim=1)
 		fake_decision = self.D(fake_all) # detach the fake data so the generator does not get updated here
 		fake_error = self.criterion(fake_decision, torch.zeros(fake_decision.size(), device=device) + torch.rand(fake_decision.size(), device=device) *.3)
 		fake_error.backward()
@@ -218,7 +221,7 @@ class GAN:
 
 		# then train the generator
 		self.G.zero_grad()
-		fake2_all = torch.cat((fake_data, rankings[half:,:]), dim=1)
+		fake2_all = torch.cat((fake_data, rankings_1.view(rankings_1.size()[0], -1)), dim=1)
 		g_fake_decision = self.D(fake2_all)
 		
 		g_error = self.criterion(g_fake_decision, torch.ones(g_fake_decision.size(), device=device))
@@ -230,6 +233,19 @@ class GAN:
 	def to(self, device):
 		self.G.to(device)
 		self.D.to(device)
+
+	def train_with_log(self, click_logs, rankings, criterion=nn.BCELoss()):
+
+		self.G.zero_grad()
+		fake_observations, fake_data = self.G(rankings)
+		
+		g_error = criterion(fake_data, click_logs)
+		g_error.backward()
+		self.g_optimizer.step()
+
+		return 0, 0, g_error.item()
+
+
 
 
 ### GENERATOR FUNCTIONS ======================================================
@@ -246,7 +262,7 @@ class Generator1(nn.Module):
 		rank_size = relevance_scores.size()[1]
 		random_noise = torch.rand((batch_size, rank_size), device=device)
 		observation_scores = self.binary_approximator(random_noise)
-		fake_click_logs = self.sampler(observation_scores, relevance_scores)
+		fake_click_logs = self.sampler(observation_scores, relevance_scores.view(batch_size, -1))
 		return observation_scores, fake_click_logs
 
 ## Generator with Learned module
@@ -269,9 +285,9 @@ class Generator2(nn.Module):
 		random_noise = torch.rand((batch_size, rank_size), device=device)
 		random_noise2 = torch.rand((batch_size, rank_size), device=device)
 		observation_scores = self.binary_approximator(random_noise)
-		alpha = self.g(relevance_scores[:,:,None]).squeeze(dim=2)
+		alpha = self.g(relevance_scores).squeeze(dim=2)
 		relevance_understanding = self.binary_approximator_rel(random_noise2, alpha)
-		fake_click_logs = observation_scores * relevance_understanding
+		fake_click_logs = observation_scores * relevance_understanding.view(batch_size, -1)
 		return observation_scores, fake_click_logs
 
 ## ==== DISCRIMINATOR FUNCTION ==================================================
