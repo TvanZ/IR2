@@ -6,7 +6,7 @@ from Baselines.EM_regression.update_click import update_fold_click
 from Baselines.EM_regression.update_rank import update_fold_rank
 
 import matplotlib.pyplot as plt
-
+import numpy as np
 from GANoN.click_models import SimpleModel, CascadeModel, PositionBiasedModel
 
 CASCADE_MODEL = "cascade_model"
@@ -54,8 +54,8 @@ def update_ranks(click_model):
 
 def process_dataset(click_model):
     save_qd(click_model)
-    update_ranks(click_model)
-    update_clicks(click_model)
+    # update_ranks(click_model)
+    # update_clicks(click_model)
 
 
 def run_em(click_model):
@@ -65,32 +65,53 @@ def run_em(click_model):
     print_theta(click_model)
 
 
-def get_actual_distribution(click_model, top_n):
+def get_actual_distribution(click_model, top_n=10):
     if click_model == SIMPLE_MODEL:
         simple_model = SimpleModel()
-        return [simple_model.getExamProb(i) for i in range(1, top_n + 1)]
-    if click_model == CASCADE_MODEL:
-        cascade_model = CascadeModel()
-        return [cascade_model.getExamProb(i, 3) for i in range(1, top_n + 1)]
+        return [simple_model.getExamProb(i) for i in range(0, top_n)]
     if click_model == POSITION_BIASED_MODEL:
         position_biased_model = PositionBiasedModel()
-        return [position_biased_model.getExamProb(i) for i in range(1, top_n + 1)]
+        return [position_biased_model.getExamProb(i) for i in range(0, top_n)]
     return []
 
 
-def print_theta(clcik_model):
-    with open('results/theta_' + clcik_model + '.pickle', 'rb') as handle:
+def get_cascade_examination_prob():
+    with open('qd_' + 'train_' + CASCADE_MODEL + '.pickle', 'rb') as handle:
+        qd = pk.load(handle)
+
+    position_bias = np.zeros(10)
+    counter = 0
+    for qid in qd.keys():
+        counter += 1
+        query = qd[qid]
+        c_k = 0
+        for idx in query.keys():
+            clicked = query[idx]['clicked']
+            rank = query[idx]['rank']
+            if clicked:
+                c_k += 1
+                for i in range(rank):
+                    position_bias[i] += 1
+
+    position_bias = position_bias / counter
+    return position_bias
+
+
+def print_theta(click_model):
+    with open('results/theta_' + click_model + '.pickle', 'rb') as handle:
         theta = pk.load(handle)
 
     print(theta)
     x = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
 
-    y = get_actual_distribution(clcik_model, 10)
-
+    if click_model == CASCADE_MODEL:
+        y = get_cascade_examination_prob()
+    else:
+        y = get_actual_distribution(click_model)
     line, = plt.plot(x, theta)
     line.set_label("EM")
     line, = plt.plot(x, y)
-    line.set_label(clcik_model + " distribution")
+    line.set_label(click_model + " distribution")
     plt.ylabel("Position bias")
     plt.xlabel("Ranking")
     plt.legend()

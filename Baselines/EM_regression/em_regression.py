@@ -7,7 +7,7 @@ import pickle as pk
 from sklearn.ensemble import GradientBoostingRegressor
 
 NO_FEATURES = 700
-NO_ITERATIONS = 2
+NO_ITERATIONS = 10
 
 GBDT = GradientBoostingRegressor(learning_rate=0.2)
 
@@ -171,7 +171,7 @@ def em_regression(query_document, click_model, top_n=10):
         save(Theta, "theta_" + click_model)
         save(P_R, "rel_prob_" + click_model)
         save(P_E, "exm_prob_" + click_model)
-        print("iteration: "+str(it)+" done")
+        print("iteration: " + str(it + 1) + " done")
 
     # Compute if each query document pair is relevant or not
     preds = F.predict(S_train)
