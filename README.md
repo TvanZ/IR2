@@ -21,7 +21,7 @@ For our upcoming advisor meeting, we would like to discuss: <br>
       (1.) Are there any suggestions for moving through the hyperparameter space —— in particular, for the hidden size              parameter?
 <br> 
 <br> 
-      (2.) Can you verify that our current implementation is correct?
+      (2.) Can you verify that our current GAN implementation is correct?
       
 ### Paper
 
