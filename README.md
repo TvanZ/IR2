@@ -18,7 +18,7 @@ recently a new method for such variables had also been introduced.
 ### Weekly Questions
 For our upcoming advisor meeting, we would like to discuss: <br> 
 <br> 
-      (1.) Are there any suggestions for moving through the hyperparameter space —— in particular, for hidden size?
+      (1.) Are there any suggestions for moving through the hyperparameter space —— in particular, for the hidden size              parameter?
 <br> 
 <br> 
       (2.) Can you verify that our current implementation is correct?
