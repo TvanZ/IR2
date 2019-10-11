@@ -118,6 +118,17 @@ def get_kl_divergence(click_model):
 
     print(click_model + ": " + str(kl))
 
+def mse(click_model):
+    with open('results/theta_' + click_model + '.pickle', 'rb') as handle:
+        theta = pk.load(handle)
+    if click_model == CASCADE_MODEL:
+        y = get_cascade_examination_prob()
+    else:
+        y = np.array(get_actual_distribution(click_model))
+
+    mse_t =  sum(abs(theta - y))/10
+
+    print(click_model + ": " + str(mse_t))
 
 def print_theta(click_model):
     with open('results/theta_' + click_model + '.pickle', 'rb') as handle:
@@ -141,4 +152,4 @@ def print_theta(click_model):
 
 
 if __name__ == "__main__":
-    get_kl_divergence(POSITION_BIASED_MODEL)
+    mse(CASCADE_MODEL)
