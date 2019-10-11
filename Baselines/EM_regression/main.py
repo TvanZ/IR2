@@ -54,8 +54,8 @@ def update_ranks(click_model):
 
 def process_dataset(click_model):
     save_qd(click_model)
-    # update_ranks(click_model)
-    # update_clicks(click_model)
+    update_ranks(click_model)
+    update_clicks(click_model)
 
 
 def run_em(click_model):
@@ -97,6 +97,28 @@ def get_cascade_examination_prob():
     return position_bias
 
 
+def get_kl_divergence(click_model):
+    with open('results/theta_' + click_model + '.pickle', 'rb') as handle:
+        theta = pk.load(handle)
+    if click_model == CASCADE_MODEL:
+        y = get_cascade_examination_prob()
+    else:
+        y = np.array(get_actual_distribution(click_model))
+
+    sum_theta = sum(theta)
+    theta /= sum_theta
+
+    sum_y = sum(y)
+    y /= sum_y
+
+    kl = 0
+
+    for i, e in enumerate(theta):
+        kl += theta[i] * np.log(theta[i] / y[i])
+
+    print(click_model + ": " + str(kl))
+
+
 def print_theta(click_model):
     with open('results/theta_' + click_model + '.pickle', 'rb') as handle:
         theta = pk.load(handle)
@@ -119,4 +141,4 @@ def print_theta(click_model):
 
 
 if __name__ == "__main__":
-    run_em(CASCADE_MODEL)
+    get_kl_divergence(POSITION_BIASED_MODEL)
