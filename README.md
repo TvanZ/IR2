@@ -18,16 +18,11 @@ recently a new method for such variables had also been introduced.
 ### Weekly Questions
 For our upcoming advisor meeting, we would like to discuss: <br> 
 <br> 
-      (1.) When we discretize the generator’s probability as either a zero or one using the methodology disccused in 
-      Paper 6, we sometimes can values that aren’t zero or one. (Assuming we correctly implemented the author's 
-      discretization method.) Is this something we need to correct/take some measure against? Or, will the 
-      discriminator just learn that these clicks are clearly fake and push the generator to produce strictly binary clicks?
+      (1.) Are there any suggestions for moving through the hyperparameter space —— in particular, for the hidden size              parameter?
 <br> 
 <br> 
-      (2.) Are our regression-based EM algorithm is underestimation position bias; however it looks as though the original
-      paper's EM algorithm overestimated position bias. Could this be a result of us using different parameters, or 
-      is there an error in our implementation?
-
+      (2.) Can you verify that our current GAN implementation is correct?
+      
 ### Paper
 
 https://www.overleaf.com/1649798953dqxcrhhcqvgs

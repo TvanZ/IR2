@@ -1,15 +1,20 @@
 import os,sys
 import random, json
 
+range = xrange
 
 def loadModelFromJson(model_desc):
-	click_model = PositionBiasedModel()
-	if model_desc['model_name'] == 'user_browsing_model':
-		click_model = UserBrowsingModel()
-	click_model.eta = model_desc['eta']
-	click_model.click_prob = model_desc['click_prob']
-	click_model.exam_prob = model_desc['exam_prob']
-	return click_model
+    modeltypes = {"user_browsing_model": UserBrowsingModel(),
+                  "simple_model": SimpleModel(),
+                  "position_biased_model": PositionBiasedModel(),
+                  "cascade_model": CascadeModel
+                  }
+
+    click_model = modeltypes[model_desc['model_name']]
+    click_model.eta = model_desc['eta']
+    click_model.click_prob = model_desc['click_prob']
+    click_model.exam_prob = model_desc['exam_prob']
+    return click_model
 
 class ClickModel:
 	def __init__(self, neg_click_prob=0.0, pos_click_prob=1.0, relevance_grading_num=1, eta=1.0):
@@ -180,7 +185,7 @@ class ObservanceRelevanceModel(ClickModel):
 			click_list.append(click)
 			exam_p_list.append(exam_p)
 			click_p_list.append(click_p)
-		return click_list, exam_p_list, click_p_list
+	    return click_list, exam_p_list, click_p_list
 
 	def estimatePropensityWeightsForOneList(self, click_list, use_non_clicked_data=False):
 		pass
@@ -196,6 +201,111 @@ class ObservanceRelevanceModel(ClickModel):
 
 	def getExamProb(self, rank, last_click_rank):
 		pass
+
+
+# Cascade model
+class CascadeModel(ClickModel):
+
+    @property
+    def model_name(self):
+        return 'cascade-model'
+
+    def setExamProb(self, eta):
+        self.eta = eta
+
+    def sampleClicksForOneList(self, label_list):
+        click_list, exam_p_list, click_p_list, exam_list = [], [], [], []
+        was_clicked = False
+        for rank in range(len(label_list)):
+            click, click_p, exam_p, exam = self.sampleClick(was_clicked, label_list[rank])
+            if click:
+                was_clicked = True
+
+            click_list.append(click)
+            exam_p_list.append(exam_p)
+            click_p_list.append(click_p)
+            exam_list.append(exam)
+        return click_list, exam_p_list, click_p_list, exam_list
+
+    def estimatePropensityWeightsForOneList(self, click_list, use_non_clicked_data=False):
+        epsilon = 1E-5
+        propensity_weights = []
+        last_click_rank = -1
+        for r in range(len(click_list)):
+            pw = 0.0
+            if use_non_clicked_data | click_list[r] > 0:
+                pw = 1.0 / (self.getExamProb(r, last_click_rank) + epsilon)
+            if click_list[r] > 0:
+                last_click_rank = r
+            propensity_weights.append(pw)
+        return propensity_weights
+
+    def sampleClick(self, was_clicked, relevance_label):
+        if was_clicked:
+            return 0, 0., 0., 0
+        alpha = relevance_label / 4  # normalization
+        if random.random() < alpha:
+            return 1, alpha, 1., 1
+        return 0, alpha, 1., 1
+
+    def getExamProb(self, rank, clicked_position):
+        if clicked_position == -1:
+            return 1.
+        if rank <= clicked_position:
+            return 1.
+        return 0.
+
+
+## Simple model
+## Observe with 1/r
+## relevance > 2 = 100% else 10%
+
+class SimpleModel(ClickModel):
+
+    @property
+    def model_name(self):
+        return 'simple_model'
+
+    def setExamProb(self, eta):
+        self.eta = eta
+        self.exam_prob = [(1 / r) for r in range(1, 11)]
+
+    def sampleClicksForOneList(self, label_list):
+        click_list, exam_p_list, click_p_list, exam_list = [], [], [], []
+        for rank in range(len(label_list)):
+            click, exam_p, click_p, exam = self.sampleClick(rank, label_list[rank])
+            click_list.append(click)
+            exam_p_list.append(exam_p)
+            click_p_list.append(click_p)
+            exam_list.append(exam)
+        return click_list, exam_p_list, click_p_list, exam_list
+
+    def estimatePropensityWeightsForOneList(self, click_list, use_non_clicked_data=False):
+        propensity_weights = []
+        for r in range(len(click_list)):
+            pw = 0.0
+            if use_non_clicked_data | click_list[r] > 0:
+                pw = 1.0 / self.getExamProb(r) * self.getExamProb(0)
+            propensity_weights.append(pw)
+        return propensity_weights
+
+    def sampleClick(self, rank, relevance_label):
+        if not relevance_label == int(relevance_label):
+            print('RELEVANCE LABEL MUST BE INTEGER!')
+        if relevance_label == -1:
+            return 0, 0, 0, 0
+        relevance_label = int(relevance_label) if relevance_label > 0 else 0
+        exam_p = self.getExamProb(rank)
+        r = random.random()
+        exam = 1 if r < exam_p else 0
+        # Relevance function.
+        click_p = 1.0 if relevance_label > 2 else 0.1
+        click = 1 if r < exam_p * click_p else 0
+        return click, exam_p, click_p, exam
+
+    def getExamProb(self, rank):
+        return self.exam_prob[rank if rank < len(self.exam_prob) else -1]
+
 
 
 def test_initialization():
@@ -235,20 +345,23 @@ def test_load_from_file():
 	print(click_model.estimatePropensityWeightsForOneList(click_list))
 
 def main():
-	model_name = sys.argv[1]
-	neg_click_prob=float(sys.argv[2])
-	pos_click_prob=float(sys.argv[3])
-	relevance_grading_num=int(sys.argv[4])
-	eta=float(sys.argv[5])
+     model_name = sys.argv[1]
+     neg_click_prob = float(sys.argv[2])
+     pos_click_prob = float(sys.argv[3])
+     relevance_grading_num = int(sys.argv[4])
+     eta = float(sys.argv[5])
 
-	click_model = PositionBiasedModel(neg_click_prob, pos_click_prob,
-							relevance_grading_num, eta)
-	if model_name == 'ubm':
-		click_model = UserBrowsingModel(neg_click_prob, pos_click_prob,
-							relevance_grading_num, eta)
+     click_model = PositionBiasedModel(neg_click_prob, pos_click_prob,
+                                       relevance_grading_num, eta)
+     if model_name == 'ubm':
+         click_model = UserBrowsingModel(neg_click_prob, pos_click_prob,
+                                         relevance_grading_num, eta)
+     if model_name == 'sm':
+         click_model = SimpleModel(neg_click_prob, pos_click_prob,
+                                   relevance_grading_num, eta)
 
-	with open('./' + '_'.join(sys.argv[1:6]) + '.json', 'w') as fout:
-		fout.write(json.dumps(click_model.getModelJson(), indent=4, sort_keys=True))
+     with open('./' + '_'.join(sys.argv[1:6]) + '.json', 'w') as fout:
+         fout.write(json.dumps(click_model.getModelJson(), indent=4, sort_keys=True))
 
 
 if __name__ == "__main__":
