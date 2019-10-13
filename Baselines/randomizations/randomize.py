@@ -1,88 +1,105 @@
+import pickle
 import os
 import numpy as np
-
-# switching to filepaths so Bella can open test.weights
-# just something Bella has to do, because of PyCharm settings
-data_group = ["train", "test"]
-# TODO: make some argument parser for this at some point?
-selected_data_group = data_group[0]
-
-dir_filepath = os.path.join("randomizations",
-                                "Input_Data",
-                                selected_data_group)
-os.chdir(dir_filepath)
+# from Baselines.EM_regression.update_click import update_fold_click
+from Baselines.randomizations.update_click import update_fold_click
 
 
-def randomize_rankings(randomized_filename, source_file, RandomType, topN=5):
-    # clears file if it already exists
-    open(randomized_filename, 'w').close()
+def get_topN_docs(click_model, queryID):
+    """
+    Returns the sorted topN docs for a single queryID.
+    :param click_model: The unpickled click model.
 
-    # loop through SVM_rankings line by linked
-    with open(source_file) as SVM_rankings:
-        query_rankings = SVM_rankings.readlines()
+    :return: ranked_docs list
+    """
+    # for every queryID, find the first top 10 relevant docs
+    unordered_docs = []  # list of [ind, rank] for all relevant docs
+    for ind in click_model[queryID]:
+        document = click_model[queryID][ind]
+        rank = document['rank']
+        # moving the docID into the doc-dictionary, so I can shuffle documents and easily keep this info
+        # a little hackey, but can be changed if needed later down the pipeline
+        document['docID'] = ind
+        if rank is not None:
+            unordered_docs.append([ind, rank])
+    # sorts unordered_docs by doc rankings
+    ordered_docs = (sorted(unordered_docs, key=lambda docs: docs[1]))
+    ordered_docIDs = list(zip(*ordered_docs))[0]
 
-        for document_list in query_rankings:
-            # making str of text into numpy array with rankings
-            queryID = str(document_list).strip().split(' ')[0]
-            doc_rankings = np.asarray(str(document_list).strip().split(' ')[1:])
+    ranked_docs = []
+    for docID in ordered_docIDs:
+        ranked_docs.append(click_model[queryID][docID])
+    return ranked_docs
 
-            # throw an error if topN (to be shuffled) exceeds the number of
-            # docs in the list
-            assert topN < 10, "ERROR! Trying to shuffle more documents than are present in the ranking."
 
-            # shuffling methods
-            if RandomType == "RandTopN": # shuffling top 5 documents randomly
-                if len(doc_rankings) >= 5:
-                    shuffled_inds = np.random.permutation(topN)
-                else:
-                    shuffled_inds = np.random.permutation(len(doc_rankings))
+def shuffle(ranked_docs, randomType, topN=5):
 
-            elif RandomType == "RandPair": # shuffling pairwise
-                if len(doc_rankings) >= 5:
-                    shuffled_inds = np.arange(topN)
-                else:
-                    shuffled_inds = np.arange(len(doc_rankings))
+    if randomType == "randTopN":  # shuffling top 5 documents randomly
+        if len(ranked_docs) >= 5:
+            shuffled_inds = np.random.permutation(topN)
+        else:
+            shuffled_inds = np.random.permutation(len(ranked_docs))
 
-                # shuffling inds pair-wise
-                for ind in range(len(shuffled_inds)-1):
-                    shuffle_docs = np.random.choice([True, False])
-                    if shuffle_docs:
-                        shuffled_inds[ind], shuffled_inds[ind+1] = shuffled_inds[ind+1], shuffled_inds[ind]
-            else:
-                "ERROR! Unknown randomization type. Either input 'Top_RandN' or 'RandPairs' to randomize rankings."
+    elif randomType == "randPair":  # shuffling pairwise
+        if len(ranked_docs) >= 5:
+            shuffled_inds = np.arange(topN)
+        else:
+            shuffled_inds = np.arange(len(ranked_docs))
 
-            # adding the non-shuffled indicies back in
-            shuffled_doc_rankings = np.append(doc_rankings[shuffled_inds], doc_rankings[5:])
+        # shuffling inds pair-wise
+        for ind in range(len(shuffled_inds) - 1):
+            shuffle_docs = np.random.choice([True, False])
+            if shuffle_docs:
+                shuffled_inds[ind], shuffled_inds[ind + 1] = shuffled_inds[ind + 1], shuffled_inds[ind]
+    else:
+        "ERROR! Unknown randomization type. Either input 'Top_RandN' or 'RandPairs' to randomize rankings."
 
-            # adding the query ID back in
-            shuffled_doc_rankings = np.append(queryID, shuffled_doc_rankings)
-            # convert np array back into list
-            shuffled_doc_rankings = shuffled_doc_rankings.tolist()
-            shuffled_doc_rankings = " ".join(shuffled_doc_rankings) + '\n'
+    # adding the non-shuffled indicies back in
+    nonshuffled_inds = np.arange(len(ranked_docs) - topN) + topN
+    shuffled_inds = np.append(shuffled_inds, nonshuffled_inds)
 
-            with open(randomized_filename, 'a') as randomized_file:
-                randomized_file.write(shuffled_doc_rankings)
+    # use shuffled_inds to redefine ranked_docs
+    shuffled_docs = [ranked_docs[ind] for ind in shuffled_inds]
+    return shuffled_docs
 
-if __name__ == "__main__":
 
-    # todo: run script on train.weights
-    #        rename swapped weights so .weights (one at a time b/c otherwise bugs)
-    #                      --->  can only have one .weights file in a folder at a time
-    #        in main.py
-    # todo: put out, per position of click:
-    #       run generate_click_data.py
-    #       how likely it is to be observed per position
+def randomize(click_model_path, selected_randomType, click_simulation_method ='POSITION_BIASED_MODEL'):
+    """
+    Saves click decisions for shuffled rankings as pickle file.
 
-    source_file = selected_data_group + ".weights"
-    # pad_weights(target_file=source_file, output_filename=output_file)
+    :param click_model_path: Pickled click model for un-shuffled rankings
+    :param selected_randomType: Randomization method to use. Either Top_RandN or RandPairs.
+    :param click_model: The click model called to simulate user clicks
+    :return: None.
+    """
+    # loading the click model
+    with open(click_model_path, 'rb') as click_model:
+        click_model = pickle.load(click_model)
 
-    # types of randomization implemented
-    options = ["RandTopN", "RandPair"]
-    selected_option = options[0]
+    # looping through all queryIDs
+    query_IDs = click_model.keys()
+    shuffled_results = {}
+    for queryID in query_IDs:
+        # First, access ranked docs --> get a list of dictionaries (each dict describes a doc)
+        ranked_documents = get_topN_docs(click_model, queryID)
+        shuffled_documents = shuffle(ranked_docs=ranked_documents, randomType=selected_randomType)
 
-    # creating filename
-    randomized_filename = "{}.randomized_{}_weights".format(selected_data_group, selected_option)
-    randomize_rankings(randomized_filename, source_file, selected_option)
+        for counter, doc in enumerate(shuffled_documents):
+            doc['rank'] = counter + 1
+            doc['clicked'] = False
+
+        shuffled_results[queryID] = shuffled_documents
+
+    with open('qd_shuffled.pickle', 'wb') as handle:
+        pickle.dump(shuffled_results, handle, protocol=pickle.HIGHEST_PROTOCOL)
+
+    # calling cascade model to over shuffled docs
+    pickled_filename = update_fold_click('shuffled', click_simulation_method)
+
+    return pickled_filename
+
+
+
 
 
 
