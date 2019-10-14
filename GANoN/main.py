@@ -49,21 +49,32 @@ def main():
 	train_set = data_utils.read_data(INPUT_DATA_PATH, 'train', RANK_CUT)
 	valid_set = data_utils.read_data(INPUT_DATA_PATH, 'valid', RANK_CUT)
 
+	# Open clicks pickle if it exists and generate is set to False
+	# otherwise generate new clicks
 	GENERATE = False
-	#Generate Clicks
-	if GENERATE:
+	try:
+		assert not GENERATE
+		pickled_clicks = pickle.load(open("train_clicks.p", "rb"))
+		click_logs, rankings, features = zip(*pickled_clicks)
+		print("Opened the train pickle!")
+		pickled_clicks = pickle.load(open("valid_clicks.p", "rb"))
+		v_click_logs, v_rankings, v_features = zip(*pickled_clicks)
+		print("Opened the validation pickle!")
+	except:
 		click_logs, rankings, features = generate_clicks(1000000, click_model, train_set.gold_weights, train_set.featuredids)
-		print("Clicks generated!")
+		print("Train clicks generated!")
 		zipped_all = zip(click_logs,rankings,features)
-		pickle.dump(zipped_all, open("clicks.p","wb"))
-		print("Saved a pickle!")
+		pickle.dump(zipped_all, open("train_clicks.p","wb"))
+		print("Saved train clicks in a pickle!")
+		v_click_logs, v_rankings, v_features = generate_clicks(1000000, click_model, valid_set.gold_weights, valid_set.featuredids)
+		print("Valid clicks generated!")
+		zipped_all = zip(v_click_logs,v_rankings,v_features)
+		pickle.dump(zipped_all, open("valid_clicks.p","wb"))
+		print("Saved valid clicks in a pickle!")
 
-	else:
-		pickled_clicks = pickle.load(open("clicks.p", "rb"))
-		click_logs, rankings, features = zip(*pickled_clicks)		
-		print("opened a pickle!")
 
 	PBM_settings_Hardcoded = {
+		"model_filename": "gan_hardcoded.p",
 		"g":{
 		'generator': Generator1,
 		'input_size' : 2,
@@ -82,6 +93,7 @@ def main():
 	}
 
 	PBM_settings_Learned_Relevance = {
+		"model_filename": "gan_learned_relevance.p",
 		"g":{
 		'generator': Generator2,
 		'input_size' : 1,
@@ -99,15 +111,16 @@ def main():
 		"feature": False
 	}
 	PBM_settings_Learned_Features = {
+		"model_filename": "gan_learned_features.p",
 		"g":{
 		'generator': Generator2,
 		'input_size' : 700,
-		'hidden_size' : 32,
+		'hidden_size' : 64,
 		'output_size' : 1,
 		'fn': nn.Sigmoid
 		},
 		"d":{
-		'hidden_size': 32,
+		'hidden_size': 64,
 		'output_size': 1,
 		'fn': nn.Sigmoid,
 		'feature_size': 700,
@@ -118,35 +131,72 @@ def main():
 
 
 
-	def run(model_settings, BATCH_SIZE = BATCH_SIZE, EMBED_SIZE = EMBED_SIZE, RANK_CUT = RANK_CUT, click_logs = click_logs, rankings = rankings, features = features):
+	def run(model_settings, load_from_file = False, BATCH_SIZE = BATCH_SIZE,
+	EMBED_SIZE = EMBED_SIZE, RANK_CUT = RANK_CUT,
+	click_logs = click_logs, rankings = rankings, features = features,
+	v_click_logs = v_click_logs, v_rankings = v_rankings, v_features = v_features):
+
+		current_best = np.inf
+		model_filename = model_settings["model_filename"]
 
 		g_optimizer = optim.Adam
 		d_optimizer = optim.Adam
 
 		gan = GAN(click_model, 10, BATCH_SIZE, model_settings, g_optimizer, d_optimizer)
+		if load_from_file:
+			ckpt = torch.load(model_filename)
+			gan.g.load_state_dict(ckpt["g_state_dict"])
+			gan.d.load_state_dict(ckpt["d_state_dict"])
+			current_best = ckpt["best_eval"]
 		gan.to(device)
 		print('perfect opbservations: tensor([1, 0.5, 0.333, 0.25, 0.2, 0.167, 0.1429, 0.125, 0.1111, 0.1])')
 		num_epochs = 100
-		real_errors, fake_errors, g_errors = [],[],[]
+		real_errors, fake_errors, g_errors, eval_errors = [],[],[],[]
 		for epoch in range(num_epochs):
+			# Train the model
 			for mini_batch in get_minibatch(BATCH_SIZE, EMBED_SIZE, RANK_CUT, list(zip(click_logs, rankings, features))):
 				click_logs_T, rankings_T, features_T = mini_batch
 				if not model_settings['feature']:
 					real_error, fake_error, g_error = gan.train(click_logs_T, rankings_T)
 				else:
 					real_error, fake_error, g_error = gan.train(click_logs_T, features_T)
-			_, rankings_tensor, features_tensor = mini_batch
+
+			# Evaluate the model and store it if it performs better than previous models
+			eval_error = 0
+			nr_of_batches = 0
+			for mini_batch in get_minibatch(BATCH_SIZE, EMBED_SIZE, RANK_CUT, list(zip(v_click_logs, v_rankings, v_features))):
+				nr_of_batches += 1
+				click_logs_T, rankings_T, features_T = mini_batch
+				if not model_settings['feature']:
+					eval_error += gan.evaluate(click_logs_T, rankings_T)
+				else:
+					eval_error += gan.evaluate(click_logs_T, features_T)
+			eval_error = eval_error / nr_of_batches
+
+			# Save the model parameters.
+			# Important! Saves parameters for G and D separately
+			# When loading the parameters, also do this for G and D separately
+			if eval_error < current_best:
+				current_best = eval_error
+				ckpt ={
+					"g_state_dict": gan.g.state_dict(),
+					"d_state_dict": gan.d.state_dict(),
+					"best_eval": current_best,
+					"best_epoch": epoch
+				}
+				torch.save(ckpt, model_filename)
 			with torch.no_grad():
 				if model_settings['feature']:
-					rankings_tensor = features_tensor
-				observations, clicks = gan.G(rankings_tensor) 
+					rankings_T = features_T
+				observations, clicks = gan.G(rankings_T)
 			observations=torch.mean(observations,dim=0)
 
 			print('observations:', observations)
-			print(f"[{epoch + 1}/{num_epochs}] | Loss D: {(real_error + fake_error)/2} | Loss G: {g_error}")
+			print(f"[{epoch + 1}/{num_epochs}] | Loss D: {(real_error + fake_error)/2} | Loss G: {g_error} | Eval Loss: {eval_error}")
 			real_errors.append(real_error)
 			fake_errors.append(fake_error)
 			g_errors.append(g_error)
+			eval_errors.append(eval_error)
 
 		print('real_errors', real_errors)
 		print('fake_errors', fake_errors)
@@ -155,7 +205,7 @@ def main():
 		return real_errors, fake_errors, g_errors
 
 
-	real,fake, g = run(PBM_settings_Hardcoded)
+	real,fake, g = run(PBM_settings_Learned_Features)
 	print(real, fake, g)
 
 
@@ -209,6 +259,8 @@ class GAN:
 		self.errors = []
 
 	def train(self, click_logs, rankings):
+		self.G.train()
+		self.D.train()
 		# first train the discriminator
 		self.D.zero_grad()
 		# train on real data
@@ -229,13 +281,21 @@ class GAN:
 
 		# then train the generator
 		self.G.zero_grad()
-		g_fake_decision = self.D(fake_data, rankings_1)
-		
+		g_fake_decision = self.D(fake_data, rankings_2)
+
 		g_error = self.criterion(g_fake_decision, torch.ones(g_fake_decision.size(), device=device))
 		g_error.backward()
 		self.g_optimizer.step()
 
 		return real_error.item(), fake_error.item(), g_error.item()
+
+	def evaluate(self, click_logs, rankings, criterion=nn.BCELoss()):
+		self.G.eval()
+		with torch.no_grad():
+			self.G.zero_grad()
+			fake_observations, fake_data = self.G(rankings)
+			g_error = criterion(fake_data, click_logs)
+			return g_error.item()
 
 	def to(self, device):
 		self.G.to(device)
@@ -245,7 +305,7 @@ class GAN:
 
 		self.G.zero_grad()
 		fake_observations, fake_data = self.G(rankings)
-		
+
 		g_error = criterion(fake_data, click_logs)
 		g_error.backward()
 		self.g_optimizer.step()
@@ -335,7 +395,7 @@ class BinaryApproximator(nn.Module):
 			self.alpha = float(alpha)
 		else:
 			self.alpha = nn.Parameter(torch.randn((1,input_size)))
-		if beta:    	    
+		if beta:
 			self.beta = float(beta)
 		else:
 			self.beta = nn.Parameter(torch.rand((1,input_size)))
