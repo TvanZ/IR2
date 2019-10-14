@@ -145,8 +145,8 @@ def main():
 		gan = GAN(click_model, 10, BATCH_SIZE, model_settings, g_optimizer, d_optimizer)
 		if load_from_file:
 			ckpt = torch.load(model_filename)
-			gan.g.load_state_dict(ckpt["g_state_dict"])
-			gan.d.load_state_dict(ckpt["d_state_dict"])
+			gan.G.load_state_dict(ckpt["g_state_dict"])
+			gan.D.load_state_dict(ckpt["d_state_dict"])
 			current_best = ckpt["best_eval"]
 		gan.to(device)
 		print('perfect opbservations: tensor([1, 0.5, 0.333, 0.25, 0.2, 0.167, 0.1429, 0.125, 0.1111, 0.1])')
@@ -179,8 +179,8 @@ def main():
 			if eval_error < current_best:
 				current_best = eval_error
 				ckpt ={
-					"g_state_dict": gan.g.state_dict(),
-					"d_state_dict": gan.d.state_dict(),
+					"g_state_dict": gan.G.state_dict(),
+					"d_state_dict": gan.D.state_dict(),
 					"best_eval": current_best,
 					"best_epoch": epoch
 				}
