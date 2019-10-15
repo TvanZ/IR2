@@ -2,6 +2,7 @@ import numpy as np
 import pickle as pk
 from random import random
 from collections import defaultdict
+import os
 
 from GANoN.click_models import CascadeModel, SimpleModel, PositionBiasedModel
 
@@ -52,7 +53,7 @@ def update_fold_click(fold, click_model):
 
     Generates clicks for a given fold of the data set
     """
-    with open('qd_' + fold + '.pickle', 'rb') as handle:
+    with open(os.path.join('outputs', 'qd_' + fold + '.pickle'), 'rb') as handle:
         qd = pk.load(handle)
 
     for qid in qd.keys():
@@ -73,7 +74,7 @@ def update_fold_click(fold, click_model):
                     print("qid:" + str(qid) + "idx: " + str(idx) + " clicked: " + str(clicked) + " rank: " + str(rank))
 
     if not DEBUG:
-        with open('qd_' + fold + '_' + click_model + '.pickle', 'wb') as handle:
+        with open(os.path.join('outputs', 'qd_' + fold + '_' + click_model + '.pickle'), 'wb') as handle:
             pk.dump(qd, handle, protocol=pk.HIGHEST_PROTOCOL)
         # print(fold + " click done!")
         # return pickled filename

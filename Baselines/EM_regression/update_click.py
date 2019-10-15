@@ -67,16 +67,18 @@ def generate_clicks(qd, qid, click_model):
             doc = query[idx]
             rel = doc['label']
             rank = doc['rank']
-            clicked = generate_simple_click(rank, rel)
-            qd[qid][idx]['clicked'] = clicked
+            if rank is not None:
+                clicked = generate_simple_click(rank, rel)
+                qd[qid][idx]['clicked'] = clicked
 
     if click_model == POSITION_BIASED_MODEL:
         for idx in query.keys():
             doc = query[idx]
             rel = doc['label']
             rank = doc['rank']
-            clicked = generate_simple_click(rank, rel)
-            qd[qid][idx] = clicked
+            if rank is not None:
+                clicked = generate_position_biased_click(rank, rel)
+                qd[qid][idx]['clicked'] = clicked
 
 
 def update_fold_click(fold, click_model):

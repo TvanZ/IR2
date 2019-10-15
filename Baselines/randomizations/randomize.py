@@ -3,6 +3,7 @@ import os
 import numpy as np
 # from Baselines.EM_regression.update_click import update_fold_click
 from Baselines.randomizations.update_click import update_fold_click
+from Baselines.randomizations.random_utils import unpickle_results
 
 
 def get_topN_docs(click_model, queryID):
@@ -73,8 +74,7 @@ def randomize(click_model_path, selected_randomType, click_simulation_method ='P
     :return: None.
     """
     # loading the click model
-    with open(click_model_path, 'rb') as click_model:
-        click_model = pickle.load(click_model)
+    click_model = unpickle_results(click_model_path)
 
     # looping through all queryIDs
     query_IDs = click_model.keys()
@@ -90,7 +90,7 @@ def randomize(click_model_path, selected_randomType, click_simulation_method ='P
 
         shuffled_results[queryID] = shuffled_documents
 
-    with open('qd_shuffled.pickle', 'wb') as handle:
+    with open(os.path.join('outputs', 'qd_shuffled.pickle'), 'wb') as handle:
         pickle.dump(shuffled_results, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
     # calling cascade model to over shuffled docs

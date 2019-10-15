@@ -11,7 +11,7 @@ def update_fold_rank(fold, click_model):
     Updates the ranking of the query document data structure accordingly to ranking obtain by the SVM
     :param fold: test, train or validation
     """
-    with open('qd_' + fold + '.pickle', 'rb') as handle:
+    with open('qd_' + fold + '_' + click_model + '.pickle',"rb") as handle:
         qd = pk.load(handle)
 
     file = open(DATABASE + fold + "/" + fold + ".trec.init_list")
