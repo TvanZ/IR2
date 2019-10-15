@@ -10,19 +10,17 @@ trial_num = 3
 
 for counter in range(trial_num):
     print('counter', counter)
-    pickle_filename = randomize(click_model_path=click_model_path,
-                                selected_randomType=randomTypes[0],
-                                click_simulation_method=click_model_path[0])
-    # list of
+    pickle_filename = os.path.join('outputs', randomize(click_model_path=click_model_path,
+                                                        selected_randomType=randomTypes[0],
+                                                        click_simulation_method=click_model_path[0]))
     if counter == 0:
         randomized_results = read_results(pickle_filename, trial_num=counter)
     else:
         randomized_results = read_results(pickle_filename,
                                           trial_num=counter,
                                           randomized_results=randomized_results)
-    print('rand_results', randomized_results)
 
-# save_results(randomized_results)
+save_results(randomized_results, 'randomized_results')
 
 
 

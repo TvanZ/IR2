@@ -90,7 +90,7 @@ def randomize(click_model_path, selected_randomType, click_simulation_method ='P
 
         shuffled_results[queryID] = shuffled_documents
 
-    with open('qd_shuffled.pickle', 'wb') as handle:
+    with open(os.path.join('outputs', 'qd_shuffled.pickle'), 'wb') as handle:
         pickle.dump(shuffled_results, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
     # calling cascade model to over shuffled docs

@@ -1,6 +1,7 @@
 import pickle
 import pandas as pd
 import numpy as np
+import os
 
 
 def read_results(click_model_path, trial_num=0, randomized_results=None):
@@ -30,9 +31,9 @@ def read_results(click_model_path, trial_num=0, randomized_results=None):
 
 
 # ============== Pickling/Unpickling files ========================
-def save_results(results_dict):
+def save_results(results_dict, filename):
     # use pickle to save dict
-    with open('filename.pickle', 'wb') as my_dict:
+    with open(filename, 'wb') as my_dict:
         pickle.dump(results_dict, my_dict, protocol=pickle.HIGHEST_PROTOCOL)
 
 
