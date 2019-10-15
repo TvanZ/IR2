@@ -1,23 +1,44 @@
 import pickle
+import pandas as pd
+import numpy as np
 
 
-def print_model(click_model_path):
+def read_results(click_model_path, trial_num=0, randomized_results=None):
+    """
 
-    with open(click_model_path, 'rb') as click_model:
-        click_model = pickle.load(click_model)
+    :param click_model_path:
+    :param trail_num:
+    :return:
+    """
+    # open the new pickle file
+    click_model = unpickle_results(click_model_path)
 
+    # only initialize randomized_results for first trial_run
+    if trial_num == 0:
+        randomized_results = {}
+
+    # otherwise, we should be passing previously generated randomized_results to this function
     for query in click_model.keys():
         docs_list = click_model[query]
-        print(docs_list)
-        break
+        for doc in docs_list:
+            query_results = [doc['docID'], doc['rank'], doc['clicked']]
+            # initialize query key and value
+            if query not in randomized_results:  # trial_num == 0:
+                randomized_results[query] = []
+            randomized_results[query].append(query_results)
+    return randomized_results
 
 
-def read_results(click_model_path):
+# ============== Pickling/Unpickling files ========================
+def save_results(results_dict):
+    # use pickle to save dict
+    with open('filename.pickle', 'wb') as my_dict:
+        pickle.dump(results_dict, my_dict, protocol=pickle.HIGHEST_PROTOCOL)
 
-    with open(click_model_path, 'rb') as click_model:
-        click_model = pickle.load(click_model)
 
-    for query in click_model.keys():
-        docs_list = click_model[query]
-        print(docs_list)
-        break
+def unpickle_results(results_dict):
+    with open(results_dict, 'rb') as click_model:
+        results_dict = pickle.load(click_model)
+    return results_dict
+
+

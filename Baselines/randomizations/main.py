@@ -3,14 +3,26 @@ from Baselines.randomizations.random_utils import *
 from Baselines.randomizations.randomize import randomize
 
 # args for script
+click_model_kind = ['POSITION_BIASED_MODEL', 'CASCADE_MODEL']
 click_model_path = os.path.join('click_models', 'qd_train_position_biased_model.pickle')
 randomTypes = ['randTopN', 'randPair']
-selected_randomType = randomTypes[0]
+trial_num = 3
 
-# obtain shuffled
-pickle_filename = randomize(click_model_path=click_model_path, selected_randomType=selected_randomType)
+for counter in range(trial_num):
+    print('counter', counter)
+    pickle_filename = randomize(click_model_path=click_model_path,
+                                selected_randomType=randomTypes[0],
+                                click_simulation_method=click_model_path[0])
+    # list of
+    if counter == 0:
+        randomized_results = read_results(pickle_filename, trial_num=counter)
+    else:
+        randomized_results = read_results(pickle_filename,
+                                          trial_num=counter,
+                                          randomized_results=randomized_results)
+    print('rand_results', randomized_results)
 
-print_model(pickle_filename)
-# read_results(pickle_filename)
-#       (1) Get pickled filename to be returned
-#       (2) Load file and access click decisions. Write code to access click decisions
+# save_results(randomized_results)
+
+
+
