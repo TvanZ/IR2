@@ -98,7 +98,7 @@ def main():
 		'generator': Generator2,
 		'input_size' : 1,
 		'hidden_size' : 20,
-		'output_size' : 1,
+		'output_size' : 2,
 		'fn': nn.Sigmoid,
 		},
 		"d":{
@@ -116,7 +116,7 @@ def main():
 		'generator': Generator2,
 		'input_size' : 700,
 		'hidden_size' : 64,
-		'output_size' : 1,
+		'output_size' : 2,
 		'fn': nn.Sigmoid
 		},
 		"d":{
@@ -171,7 +171,7 @@ def main():
 					eval_error += gan.evaluate(click_logs_T, rankings_T)
 				else:
 					eval_error += gan.evaluate(click_logs_T, features_T)
-			eval_error = eval_error / nr_of_batches
+			eval_error = - eval_error / nr_of_batches
 
 			# Save the model parameters.
 			# Important! Saves parameters for G and D separately
@@ -185,13 +185,19 @@ def main():
 					"best_epoch": epoch
 				}
 				torch.save(ckpt, model_filename)
-			with torch.no_grad():
-				if model_settings['feature']:
-					rankings_T = features_T
-				observations, clicks = gan.G(rankings_T)
-			observations=torch.mean(observations,dim=0)
 
+			# Get the current observations model from the gan
+			observation_alphas = gan.G.binary_approximator.alpha.data
+			observation_betas = gan.G.binary_approximator.beta.data
+			observations = 1-CDFKuma(observation_alphas, observation_betas, threshold = 0.5)
+			# OLD METHOD: frequentist approach
+			# with torch.no_grad():
+			# 	if model_settings['feature']:
+			# 		rankings_T = features_T
+			# 	observations, clicks = gan.G(rankings_T)
+			# observations=torch.mean(observations,dim=0)
 			print('observations:', observations)
+
 			print(f"[{epoch + 1}/{num_epochs}] | Loss D: {(real_error + fake_error)/2} | Loss G: {g_error} | Eval Loss: {eval_error}")
 			real_errors.append(real_error)
 			fake_errors.append(fake_error)
@@ -293,9 +299,18 @@ class GAN:
 		self.G.eval()
 		with torch.no_grad():
 			self.G.zero_grad()
-			fake_observations, fake_data = self.G(rankings)
-			g_error = criterion(fake_data, click_logs)
-			return g_error.item()
+			observation_alphas = self.G.binary_approximator.alpha.data
+			# print(observation_alphas)
+			observation_betas = self.G.binary_approximator.beta.data
+			# print(observation_betas)
+			relevance_alpha_beta = self.G.g(rankings)
+			return LogLikelihood(observation_alphas, observation_betas,
+			relevance_alpha_beta, click_logs)
+
+			#
+			# fake_observations, fake_data = self.G(rankings)
+			# g_error = criterion(fake_data, click_logs)
+			# return g_error.item()
 
 	def to(self, device):
 		self.G.to(device)
@@ -345,7 +360,7 @@ class Generator2(nn.Module):
 			fn(),
 			nn.Linear(hidden_size, output_size)
 		)
-		self.binary_approximator_rel = BinaryApproximator(rank_cut, alpha = 1)
+		self.binary_approximator_rel = BinaryApproximator(rank_cut, alpha = 1, beta = 1)
 
 	def forward(self, relevance_scores):
 		batch_size = relevance_scores.size()[0]
@@ -355,9 +370,9 @@ class Generator2(nn.Module):
 		observation_scores = self.binary_approximator(random_noise)
 		norm = self.normal(relevance_scores.view(-1, relevance_scores.size()[-1]))
 		norm = norm.view(relevance_scores.size())
-		alpha = self.g(norm).squeeze(dim=2)
-		relevance_understanding = self.binary_approximator_rel(random_noise2, alpha)
-		fake_click_logs = observation_scores * relevance_understanding.view(batch_size, -1)
+		alpha,beta = torch.chunk(self.g(norm), 2, dim=-1)
+		relevance_understanding = self.binary_approximator_rel(random_noise2, alpha.squeeze(dim=2), beta.squeeze(dim=2))
+		fake_click_logs = observation_scores * relevance_understanding
 		return observation_scores, fake_click_logs
 
 ## ==== DISCRIMINATOR FUNCTION ==================================================
@@ -403,8 +418,10 @@ class BinaryApproximator(nn.Module):
 		self.zeta = zeta
 
 		#if BinaryApproximator is used by a neural net put alpha on some value.
-	def forward(self, u, alpha = None):
-		if alpha is not None:
+	def forward(self, u, alpha = None, beta = None):
+		if alpha is not None and beta is not None:
+			s = torch.sigmoid((torch.log(u) - torch.log(1 - u) + torch.log(F.softplus(alpha)))/F.softplus(beta))
+		elif alpha is not None:
 			s = torch.sigmoid((torch.log(u) - torch.log(1 - u) + torch.log(F.softplus(alpha)))/F.softplus(self.beta))
 		else:
 			s = torch.sigmoid((torch.log(u) - torch.log(1 - u) + torch.log(F.softplus(self.alpha))/F.softplus(self.beta)))
@@ -412,8 +429,6 @@ class BinaryApproximator(nn.Module):
 		binarysize = mean_s.size()
 		z = torch.min(torch.ones(binarysize, device=device),(torch.max(torch.zeros(binarysize, device=device),mean_s)))
 		return z
-
-
 
 class ClickSampler(nn.Module):
 	def __init__(self, relevance_threshold = 3):
@@ -425,6 +440,38 @@ class ClickSampler(nn.Module):
 		click_probabilities[rankings < self.relevance_threshold] = 0.1
 		click_logs = torch.bernoulli(click_probabilities)
 		return click_logs * observation_scores
+
+def CDFKuma(alpha, beta, threshold = 0.5):
+	assert alpha.size() == beta.size()
+	t = torch.zeros(alpha.size()).to(device) + threshold
+	return 1-torch.pow(1-torch.pow(t, F.softplus(alpha)), F.softplus(beta))
+
+def SumOfLogs(alpha, beta, label):
+	cdf = CDFKuma(alpha, beta)
+	chance_of_zero = cdf
+	chance_of_one = 1 - cdf
+	chance_of_correct = label * chance_of_one + (1-label) * chance_of_zero
+	return torch.sum(torch.log(chance_of_correct))
+
+def LogLikelihood(observation_alpha, observation_beta,
+	relevance_parameters, label):
+
+	p_observation = 1-CDFKuma(observation_alpha, observation_beta)
+	alpha, beta = torch.chunk(relevance_parameters, 2, dim=-1)
+	p_relevance = 1-CDFKuma(alpha, beta).squeeze(dim=-1)
+
+	p_click = p_observation * p_relevance
+	p_not_click = 1 - p_click
+	p_correct = label * p_click + (1-label) * p_not_click
+
+	return torch.sum(torch.log(p_correct)) / (label.size()[0] * 10)
+
+	# relevance_sum = SumOfLogs(alpha.squeeze(dim=2), beta.squeeze(dim=2), relevances)
+	# return relevance_sum / (relevances.size()[0] * 10 )
+	# full_sum = observation_sum + relevance_sum
+	# normalized_sum = full_sum / (observations.size()[0] * 10)
+	# return normalized_sum
+
 
 if __name__ == "__main__":
 	if device == torch.device('cuda'):
