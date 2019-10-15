@@ -15,11 +15,11 @@ POSITION_BIASED_MODEL = "position_biased_model"
 
 
 def save_qd(click_model):
-    fold = ".train.txt"
-    query_document_train = read_fold(fold)
-    with open('qd_train_' + click_model + '.pickle', 'wb') as handle:
-        pk.dump(query_document_train, handle, protocol=pk.HIGHEST_PROTOCOL)
-    print("Train done!")
+    # fold = ".train.txt"
+    # query_document_train = read_fold(fold)
+    # with open('qd_train_' + click_model + '.pickle', 'wb') as handle:
+    #     pk.dump(query_document_train, handle, protocol=pk.HIGHEST_PROTOCOL)
+    # print("Train done!")
 
     fold = ".valid.txt"
     query_document_valid = read_fold(fold)
@@ -27,11 +27,11 @@ def save_qd(click_model):
         pk.dump(query_document_valid, handle, protocol=pk.HIGHEST_PROTOCOL)
     print("Validate done!")
 
-    fold = ".test.txt"
-    query_document_test = read_fold(fold)
-    with open('qd_test_' + click_model + '.pickle', 'wb') as handle:
-        pk.dump(query_document_test, handle, protocol=pk.HIGHEST_PROTOCOL)
-    print("Test done!")
+    # fold = ".test.txt"
+    # query_document_test = read_fold(fold)
+    # with open('qd_test_' + click_model + '.pickle', 'wb') as handle:
+    #     pk.dump(query_document_test, handle, protocol=pk.HIGHEST_PROTOCOL)
+    # print("Test done!")
 
 
 def update_clicks(click_model):
@@ -58,11 +58,50 @@ def process_dataset(click_model):
     update_clicks(click_model)
 
 
+def exp_normalize(x):
+    b = x.max()
+    y = np.max(x - b)
+    return y / y.sum()
+
+
+def compute_data_set_likelihood(theta, relevance_model, qd):
+    likelihoods = []
+    for qid in qd.keys():
+        query = qd[qid]
+        for idx in query.keys():
+            doc = query[idx]
+            features = doc['features']
+            rank = doc['rank']
+            if rank is not None:
+                relevance = relevance_model.predict(features.reshape(1, 700))
+                position_bias = theta[rank - 1]
+                factor = relevance * position_bias
+                clicked = 1. if doc['clicked'] else 0.
+                click_probability = factor ** clicked * (1 - factor) ** (1 - clicked)
+                likelihoods.append(click_probability)
+    likelihoods = np.stack(likelihoods)
+    likelihoods = np.log(likelihoods).sum()
+
+    print(likelihoods)
+
+    return likelihoods
+
+
+def get_metrics(click_model, fold):
+    with open('qd_' + fold + '_' + click_model + '.pickle', 'rb') as handle:
+        qd = pk.load(handle)
+    with open('results/theta_' + click_model + '.pickle', 'rb') as handle:
+        theta = pk.load(handle)
+    with open('results/rel_fct_' + click_model + '.pickle', 'rb') as handle:
+        relevance_model = pk.load(handle)
+    print_theta(click_model)
+    compute_data_set_likelihood(theta, relevance_model, qd)
+
+
 def run_em(click_model):
     with open('qd_' + 'train_' + click_model + '.pickle', 'rb') as handle:
         qd = pk.load(handle)
-    Theta, preds, p_e, p_r = em_regression(qd, click_model)
-    print_theta(click_model)
+    Theta, rel_fct, preds, p_e, p_r = em_regression(qd, click_model)
 
 
 def get_actual_distribution(click_model, top_n=10):
@@ -118,6 +157,7 @@ def get_kl_divergence(click_model):
 
     print(click_model + ": " + str(kl))
 
+
 def mse(click_model):
     with open('results/theta_' + click_model + '.pickle', 'rb') as handle:
         theta = pk.load(handle)
@@ -126,9 +166,10 @@ def mse(click_model):
     else:
         y = np.array(get_actual_distribution(click_model))
 
-    mse_t =  sum(abs(theta - y))/10
+    mse_t = sum(abs(theta - y)) / 10
 
     print(click_model + ": " + str(mse_t))
+
 
 def print_theta(click_model):
     with open('results/theta_' + click_model + '.pickle', 'rb') as handle:
@@ -152,4 +193,7 @@ def print_theta(click_model):
 
 
 if __name__ == "__main__":
-    mse(CASCADE_MODEL)
+    # save_qd(POSITION_BIASED_MODEL)
+    update_fold_rank('valid',CASCADE_MODEL)
+    update_fold_click('valid',CASCADE_MODEL)
+    run_em(CASCADE_MODEL)

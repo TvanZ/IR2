@@ -171,9 +171,10 @@ def em_regression(query_document, click_model, top_n=10):
         save(Theta, "theta_" + click_model)
         save(P_R, "rel_prob_" + click_model)
         save(P_E, "exm_prob_" + click_model)
+        save(F, "rel_fct_" + click_model)
         print("iteration: " + str(it + 1) + " done")
 
     # Compute if each query document pair is relevant or not
     preds = F.predict(S_train)
     save(preds, "preds_" + click_model)
-    return Theta, preds, P_E, P_R
+    return Theta, F, preds, P_E, P_R
