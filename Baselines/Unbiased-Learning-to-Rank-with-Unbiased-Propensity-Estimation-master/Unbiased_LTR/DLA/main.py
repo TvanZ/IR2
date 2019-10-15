@@ -19,6 +19,7 @@ import numpy as np
 from six.moves import xrange	# pylint: disable=redefined-builtin
 import tensorflow as tf
 import json
+import cPickle as pickle
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import data_utils
@@ -126,6 +127,7 @@ def train():
 				print ("global step %d learning rate %.4f step-time %.2f loss "
 							 "%.2f" % (model.global_step.eval(), model.learning_rate.eval(),
 												 step_time, loss))
+
 				#train_writer.add_summary({'step-time':step_time, 'loss':loss}, current_step)
 
 				# Decrease learning rate if no improvement was seen over last 3 times.
@@ -184,12 +186,13 @@ def decode():
 		test_set.pad(test_set.rank_list_size)
 
 		rerank_scores = []
+		output_logits_list = []
 
 		# Decode from test data.
 		for i in xrange(len(test_set.initial_list)):
-			input_feed, _ = model.get_data_by_index(test_set, i)
-			test_loss, output_logits, summary = model.step(sess, input_feed, True)
-
+			input_feed, others_map = model.get_data_by_index(test_set, i)
+			test_loss, output_logits, summary, propensity_logits = model.step(sess, input_feed, True)
+			output_logits_list.extend(output_logits.tolist())
 			#The output is a list of rerank index for decoder_inputs (which represents the gold rank list)
 			rerank_scores.append(output_logits[0])
 			if i % FLAGS.steps_per_checkpoint == 0:
@@ -205,6 +208,19 @@ def decode():
 			data_utils.output_ranklist(test_set, rerank_scores, FLAGS.test_dir, 'train')
 		else:
 			data_utils.output_ranklist(test_set, rerank_scores, FLAGS.test_dir, 'test')
+
+		propensity_logits = propensity_logits.tolist()
+		propensity_logits.extend(output_logits_list)
+		total_list = propensity_logits
+		# pickle.dump(total_list, open("DLA_logits.p","wb"))
+		# print("Saved a pickle!")
+
+		f_out = open('DLA_logits.txt','w')
+		for i in xrange(len(total_list)):
+			f_out.write(str(total_list[i])+'\n')
+		f_out.close()
+
+
 
 	return
 
@@ -331,6 +347,11 @@ def self_test():
 
 				if FLAGS.max_train_iteration > 0 and current_step > FLAGS.max_train_iteration:
 					break
+
+def softmax(x):
+    """Compute softmax values for each sets of scores in x."""
+    e_x = np.exp(x - np.max(x))
+    return e_x / e_x.sum()
 
 
 def main(_):

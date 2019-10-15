@@ -87,7 +87,7 @@ class DLA(object):
 			max_gradient_norm=5.0,			# Clip gradients to this norm.
 			#reverse_input=True,				# Set to True for reverse input sequences.
 			hidden_layer_sizes=[512, 256, 128],		# Number of neurons in each layer of a RankNet. 
-			loss_func='click_weighted_softmax_cross_entropy',			# Select Loss function
+			loss_func='None',			# Select Loss function
 			logits_to_prob='softmax',		# the function used to convert logits to probability distributions
 			ranker_learning_rate=-1.0, 		# The learning rate for ranker (-1 means same with learning_rate).
 			ranker_loss_weight=1.0,			# Set the weight of unbiased ranking loss
@@ -149,20 +149,31 @@ class DLA(object):
 		else: # softmax loss without weighting
 			self.loss_func = self.softmax_loss
 
+
 		# Compute rank loss
 		self.rank_loss, self.propensity_weights = self.loss_func(self.output, self.target_inputs, self.target_clicks, self.propensity)
 		pw_list = tf.split(self.propensity_weights, self.rank_list_size, 1) # Compute propensity weights
-		for i in xrange(self.rank_list_size):
-			tf.summary.scalar('Avg Propensity weights %d' % i, tf.reduce_mean(pw_list[i]))
-		tf.summary.scalar('Rank Loss', tf.reduce_mean(self.rank_loss))
+		if not forward_only:
+			for i in xrange(self.rank_list_size):
+				tf.summary.scalar('Avg Propensity weights %d' % i, tf.reduce_mean(pw_list[i]))
+			tf.summary.scalar('Rank Loss', tf.reduce_mean(self.rank_loss))
+		else:
+			for i in xrange(self.rank_list_size):
+				tf.summary.scalar('Propensity weights %d' % i, tf.reduce_mean(pw_list[i]))
+			tf.summary.scalar('Rank Loss', tf.reduce_mean(self.rank_loss))
 
 		# Compute examination loss
 		self.exam_loss, self.relevance_weights = self.loss_func(self.propensity, self.target_inputs, self.target_clicks, self.output)
 		rw_list = tf.split(self.relevance_weights, self.rank_list_size, 1) # Compute propensity weights
-		for i in xrange(self.rank_list_size):
-			tf.summary.scalar('Avg Relevance weights %d' % i, tf.reduce_mean(rw_list[i]))
-		tf.summary.scalar('Exam Loss', tf.reduce_mean(self.exam_loss))
-		
+		if not forward_only:
+			for i in xrange(self.rank_list_size):
+				tf.summary.scalar('Avg Relevance weights %d' % i, tf.reduce_mean(rw_list[i]))
+			tf.summary.scalar('Exam Loss', tf.reduce_mean(self.exam_loss))
+		else:
+			for i in xrange(self.rank_list_size):
+				tf.summary.scalar('Relevance weights %d' % i, tf.reduce_mean(rw_list[i]))
+			tf.summary.scalar('Exam Loss', tf.reduce_mean(self.exam_loss))
+
 		# Gradients and SGD update operation for training the model.
 		self.loss = self.exam_loss + self.hparams.ranker_loss_weight * self.rank_loss
 		if not forward_only:
@@ -182,6 +193,7 @@ class DLA(object):
 
 		self.summary = tf.summary.merge_all()
 		self.saver = tf.train.Saver(tf.global_variables())
+
 
 	def separate_gradient_update(self):
 		denoise_params = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, "denoising_model")
@@ -272,8 +284,8 @@ class DLA(object):
 	def DenoisingNet(self, forward_only=False, scope=None):
 		with variable_scope.variable_scope(scope or "denoising_model"):
 			# If we are in testing, do not compute propensity
-			if forward_only:
-				return tf.ones_like(self.output)#, tf.ones_like(self.output)
+			# if forward_only:
+			# 	return tf.ones_like(self.output)#, tf.ones_like(self.output)
 			input_vec_size = self.rank_list_size
 			print('Use previous relevance probability for denoising %r' % self.hparams.use_previous_rel_prob)
 			rel_prob_list = []
@@ -351,19 +363,20 @@ class DLA(object):
 		if not forward_only:
 			output_feed = [self.updates,	# Update Op that does SGD.
 							self.loss,	# Loss for this batch.
-							self.summary # Summarize statistics.
+							self.summary, # Summarize statistics.
 							]	
 		else:
 			output_feed = [self.loss, # Loss for this batch.
 						self.summary, # Summarize statistics.
-						self.output   # Model outputs
+						self.output,   # Model outputs
+						self.propensity
 			]	
 
 		outputs = session.run(output_feed, input_feed)
 		if not forward_only:
-			return outputs[1], None, outputs[-1]	# loss, no outputs, summary.
+			return outputs[1], None, outputs[-1] 	# loss, no outputs, summary.
 		else:
-			return outputs[0], outputs[2], outputs[1]	# loss, outputs, summary.
+			return outputs[0], outputs[2], outputs[1], outputs[3]	# loss, outputs, summary.
 
 	#def prepare_data_with_index(self, input_seq, output_seq, output_weights, output_initial_score, features, index, encoder_inputs, decoder_targets, embeddings, decoder_clicks, decoder_propensity_weights):
 	def prepare_data_with_index(self, data_set, index, encoder_inputs, decoder_targets, embeddings, decoder_clicks):
