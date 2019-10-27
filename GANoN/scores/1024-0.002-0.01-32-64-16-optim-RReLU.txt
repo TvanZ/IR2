@@ -1,0 +1,5 @@
+[0.6467471052024225, 0.6216678459679519, 0.6098628591147429, 0.6075332368660394, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan]
+[0.7337481161838731, 0.7554695704605003, 0.7666924933682729, 0.7699698033944018, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan]
+[0.6383893646697946, 0.611326432172697, 0.6005406296396729, 0.5990745041135783, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan]
+[4.937499135322378, inf, inf, inf, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan]
+[-9.883926481295033, -9.844155755748076, -9.7578649852705, -9.643788884761625, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan]

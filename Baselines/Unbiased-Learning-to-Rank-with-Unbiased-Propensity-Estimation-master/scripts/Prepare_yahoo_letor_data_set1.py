@@ -3,6 +3,8 @@ import random
 import math
 import json
 
+xrange = range
+
 list_lengths = []
 
 def read_one_instance(feature_fin, rank_score_fin):
@@ -62,7 +64,7 @@ def prepare_one_set(rank_cutoff, feature_path, rank_score_path, output_path ,set
 	for qid in qid_list:
 		for i in xrange(len(qid_initial_rank_map[qid])):
 			idx = qid_initial_rank_map[qid][i]
-			#qrel_fout.write(qid + ' 0 ' + qid_did_map[qid][idx] + ' ' 
+			#qrel_fout.write(qid + ' 0 ' + qid_did_map[qid][idx] + ' '
 			#				+ str(int(qid_label_map[qid][idx])) + '\n')
 			initial_trec_fout.write(qid + ' Q0 ' + qid_did_map[qid][idx] + ' ' + str(i+1)
 							+ ' ' + str(qid_score_map[qid][idx]) + ' RankSVM\n')
@@ -71,7 +73,7 @@ def prepare_one_set(rank_cutoff, feature_path, rank_score_path, output_path ,set
 							+ ' ' + str(qid_label_map[qid][gold_idx]) + ' Gold\n')
 		#output qrels
 		for i in xrange(len(qid_did_map[qid])):
-			qrel_fout.write(qid + ' 0 ' + qid_did_map[qid][i] + ' ' 
+			qrel_fout.write(qid + ' 0 ' + qid_did_map[qid][i] + ' '
 							+ str(int(qid_label_map[qid][i])) + '\n')
 	qrel_fout.close()
 	initial_trec_fout.close()
@@ -101,7 +103,7 @@ def prepare_one_set(rank_cutoff, feature_path, rank_score_path, output_path ,set
 			for x in qid_feature_map[qid][idx]:
 				#svmlight format feature index starts from 1, but we need it to start from 0
 				arr = x.split(':')
-				feature_fout.write(' ' + str(int(arr[0]) - 1) + ':' + arr[1]) 
+				feature_fout.write(' ' + str(int(arr[0]) - 1) + ':' + arr[1])
 			feature_fout.write('\n')
 			line_num += 1
 

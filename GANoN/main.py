@@ -32,7 +32,7 @@ def main():
 	# this should be equal or smaller than the rank cut when creating the data
 	RANK_CUT = int(sys.argv[4])
 	SET_NAME = ['train','test','valid']
-	BATCH_SIZE = 512
+	BATCH_SIZE = 1024
 	EMBED_SIZE = 700
 	with open(CLICK_MODEL_JSON) as fin:
 		model_desc = json.load(fin)
@@ -115,16 +115,16 @@ def main():
 		"g":{
 		'generator': Generator2,
 		'input_size' : 700,
-		'hidden_size' : 64,
+		'hidden_size' : 32,
 		'output_size' : 2,
 		'fn': nn.Sigmoid
 		},
 		"d":{
-		'hidden_size': 64,
+		'hidden_size': 32,
 		'output_size': 1,
 		'fn': nn.Sigmoid,
 		'feature_size': 700,
-		'embed_size': 8,
+		'embed_size': 4,
 		},
 		"feature": True
 	}
