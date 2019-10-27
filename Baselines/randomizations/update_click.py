@@ -44,7 +44,6 @@ def reset(qd):
 def generate_clicks(qd, qid, click_model):
     query = qd[qid]
     if click_model == CASCADE_MODEL:
-        print("In 'if click_model == CASCADE_MODEL' statement.")
         current_rank = 0
         clicked = False
 
@@ -66,7 +65,6 @@ def generate_clicks(qd, qid, click_model):
             current_rank += 1
 
     if click_model == SIMPLE_MODEL:
-        print("In 'click_model == SIMPLE_MODEL' statement.")
         for idx in query.keys():
             doc = query[idx]
             rel = doc['label']
@@ -76,7 +74,6 @@ def generate_clicks(qd, qid, click_model):
                 qd[qid][idx]['clicked'] = clicked
 
     if click_model == POSITION_BIASED_MODEL:
-        print("In 'click_model == POSITION_BIASED_MODEL' statement")
         for idx in query.keys():
             doc = query[idx]
             rel = doc['label']
