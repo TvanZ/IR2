@@ -13,16 +13,15 @@ def read_results(click_model_path, trial_num=0, randomized_results=None):
     """
     # open the new pickle file
     click_model = unpickle_results(click_model_path)
-
-    # only initialize randomized_results for first trial_run
+    # only initialize randomized_results.pickle for first trial_run
     if trial_num == 0:
         randomized_results = {}
 
-    # otherwise, we should be passing previously generated randomized_results to this function
+    # otherwise, we should be passing previously generated randomized_results.pickle to this function
     for query in click_model.keys():
         docs_list = click_model[query]
-        for doc in docs_list:
-            query_results = [doc['docID'], doc['rank'], doc['clicked']]
+        for docID, doc in docs_list.items():
+            query_results = [docID, doc['rank'], doc['clicked']]
             # initialize query key and value
             if query not in randomized_results:  # trial_num == 0:
                 randomized_results[query] = []

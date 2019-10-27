@@ -60,7 +60,16 @@ def shuffle(ranked_docs, randomType, topN=5):
     shuffled_inds = np.append(shuffled_inds, nonshuffled_inds)
 
     # use shuffled_inds to redefine ranked_docs
-    shuffled_docs = [ranked_docs[ind] for ind in shuffled_inds]
+    shuffled_docs_list = [ranked_docs[ind] for ind in shuffled_inds]
+
+    # convert back into original format so compatible with Traian's code
+    shuffled_docs = {}
+    for document in shuffled_docs_list:
+        # move the docID into a shuffled_docs key, and delete it in the document list
+        docID = document['docID']
+        del document['docID']
+        shuffled_docs[docID] = document
+
     return shuffled_docs
 
 
@@ -84,16 +93,15 @@ def randomize(click_model_path, selected_randomType, click_simulation_method ='P
         ranked_documents = get_topN_docs(click_model, queryID)
         shuffled_documents = shuffle(ranked_docs=ranked_documents, randomType=selected_randomType)
 
-        for counter, doc in enumerate(shuffled_documents):
+        for counter, doc in enumerate(shuffled_documents.values()):
             doc['rank'] = counter + 1
-            doc['clicked'] = False
 
         shuffled_results[queryID] = shuffled_documents
 
     with open(os.path.join('outputs', 'qd_shuffled.pickle'), 'wb') as handle:
         pickle.dump(shuffled_results, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
-    # calling cascade model to over shuffled docs
+    # calling cascade model to over shuffled docs, and make new click decisions
     pickled_filename = update_fold_click('shuffled', click_simulation_method)
 
     return pickled_filename
