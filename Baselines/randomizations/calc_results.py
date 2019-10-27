@@ -19,11 +19,12 @@ def calc_values(pickle_filepath):
 
     theta /= (total*100)
     print(theta)
-    qd_test = unpickle_results('./click_models/qd_test_position_biased_model.pickle')
-
+    qd_test = unpickle_results('./click_models/qd_test_simple_model.pickle')
+    counter = 0
     probs =  []
     for qid in qd_test.keys():
         query = qd_test[qid]
+        counter+=1
         for idx in query.keys():
             rank = query[idx]['rank']
             if rank is not None:
@@ -37,5 +38,7 @@ def calc_values(pickle_filepath):
     total = 0
     for prob in probs:
         total += prob
-    total /= len(probs)
-    print(np.exp(total))
+    total /= counter
+    print(total)
+
+calc_values('randomized_results.pickle')
